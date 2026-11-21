@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in Just the Tooltip! doesn't work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting! The more of this you can fill in, the faster it gets fixed.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      description: Where you were and what you did (class, level, solo or in a group, zone...).
+      placeholder: |
+        1. ...
+        2. ...
+  - type: input
+    id: version
+    attributes:
+      label: Just the Tooltip! version
+      description: Shown in your addon list, or on the CurseForge file you installed.
+      placeholder: e.g. 1.2.3
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message (if any)
+      description: Paste the full error from BugSack / BugGrabber or the game's error popup.
+      render: text
+  - type: textarea
+    id: debug
+    attributes:
+      label: Debug output (if you can)
+      description: "Your Position and Look settings in /jtt, and other tooltip addons you use. Screenshots are fine too."
+  - type: textarea
+    id: addons
+    attributes:
+      label: Other addons
+      description: Any you think might be involved (nameplate, action bar or quest addons, UI packs).

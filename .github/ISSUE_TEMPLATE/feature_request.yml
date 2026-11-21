@@ -1,0 +1,20 @@
+name: Feature request
+description: An idea to make Just the Tooltip! better
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why? What would it help with?
+      description: The situation you're in when you wish it did this. Helps find the best way to build it.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, examples from other addons...
