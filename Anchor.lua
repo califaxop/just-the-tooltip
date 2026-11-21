@@ -17,6 +17,8 @@ A.CORNERS = CORNERS
 -- cursor (re-placed only when the mouse actually moved), and/or hide a world tooltip the moment
 -- you stop hovering what it's about (checked 20 times a second, not every frame).
 local following, watching = false, false
+local worldUnit = false -- the tooltip shows a unit in the world (set when it's filled)
+local ghost = false     -- a world unit's tooltip was hidden and nothing new has been put in it since
 local lastX, lastY, sinceCheck = nil, nil, 0
 local driver = CreateFrame("Frame")
 driver:Hide()
@@ -42,13 +44,15 @@ driver:SetScript("OnUpdate", function(_, elapsed)
     sinceCheck = sinceCheck + elapsed
     if sinceCheck >= 0.05 then
       sinceCheck = 0
-      if not UnitExists("mouseover") then watching = false; GameTooltip:Hide() end
+      local ok, exists = pcall(UnitExists, "mouseover")
+      if ok and ns.Readable(exists) and not exists then watching = false; GameTooltip:Hide() end
     end
   end
 end)
 
 -- a world unit's tooltip: hide it as soon as the mouse leaves the unit (instead of the game's fade)
 function A.WatchMouseover()
+  worldUnit = true
   if not ns.db.instantHide then return end
   watching, sinceCheck = true, 0
   driver:Show()
@@ -108,6 +112,18 @@ function A.Unlock(on)
   if A.onUnlock then A.onUnlock(on) end
 end
 
+-- /jtt debug: what the tooltip is doing right now
+function A.Debug()
+  local tip = GameTooltip
+  local owner = tip:GetOwner()
+  local ok, _, unit = pcall(tip.GetUnit, tip)
+  local okM, mo = pcall(UnitExists, "mouseover")
+  ns.Print(format("shown=%s owner=%s unit=%s mouseover=%s following=%s watching=%s worldUnit=%s ghost=%s",
+    tostring(tip:IsShown()), tostring(owner and (owner.GetName and owner:GetName() or "a frame") or "none"),
+    tostring(ok and ns.Readable(unit) and unit or "?"), tostring(okM and ns.Readable(mo) and mo or "?"),
+    tostring(following), tostring(watching), tostring(worldUnit), tostring(ghost)))
+end
+
 function A.ResetSpot()
   ns.db.spot = ns.Copy(ns.DEFAULTS.spot)
   A.PlaceSpot()
@@ -139,9 +155,20 @@ function A.Hook()
   if hooksecurefunc and GameTooltip_SetDefaultAnchor then
     hooksecurefunc("GameTooltip_SetDefaultAnchor", OnDefaultAnchor)
   end
-  -- anything else placing the tooltip (a bag slot, a button) takes over: stop following
-  if hooksecurefunc then hooksecurefunc(GameTooltip, "SetOwner", function() Stop() end) end
-  GameTooltip:HookScript("OnHide", Stop)
+  -- anything else placing the tooltip (a bag slot, a button) takes over: stop following. It's
+  -- also how anything new is put in the tooltip, so it ends a "ghost" (below)
+  if hooksecurefunc then hooksecurefunc(GameTooltip, "SetOwner", function() Stop(); ghost = false end) end
+  GameTooltip:HookScript("OnHide", function()
+    Stop()
+    if worldUnit then ghost = true end
+    worldUnit = false
+  end)
+  -- A world unit's tooltip can come back after it was hidden, still showing that unit (without its
+  -- health bar) and staying until you hover something else. Everything new in the tooltip comes
+  -- with a new owner first, so a show with no new owner since is that ghost: hide it again.
+  GameTooltip:HookScript("OnShow", function(tip)
+    if ghost and ns.db.instantHide then tip:Hide() end
+  end)
   -- the game starts fading a world tooltip when you stop hovering it (units and objects): hide it now
   if hooksecurefunc and GameTooltip.FadeOut then
     hooksecurefunc(GameTooltip, "FadeOut", function(tip)

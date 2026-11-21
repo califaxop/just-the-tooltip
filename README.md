@@ -26,6 +26,7 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 | `/jtt` (or `/justthetooltip`) | Open settings |
 | `/jtt move` | Drag your own tooltip spot (right-click the box when done) |
 | `/jtt reset` | Tooltips back at the game's spot |
+| `/jtt debug` | What the tooltip is doing right now (handy for bug reports) |
 
 ## Good to know
 - Only tooltips the game would put in the bottom-right corner move. Tooltips that open beside your bags or a window stay next to them.
@@ -34,4 +35,5 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 Found a bug or have an idea? [Open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose): there's a short form for each. The settings window has a "Report a bug / suggest" button with this link too.
 
 ## Recent changes
+- **1.0.1:** Fixed a unit's tooltip sometimes staying on screen after you moved off it (until you hovered something else). New `/jtt debug` shows what the tooltip is doing, for bug reports.
 - **1.0.0:** First release: tooltip at the game's spot, by your cursor or your own spot; Item ID / Spell ID, item level, target line, health numbers, JTT style, tooltips that vanish the moment you stop hovering, and hiding in combat.
