@@ -6,6 +6,7 @@ ns.Look = L
 local Readable = ns.Readable
 
 local skins = {}
+L.skins = skins -- (for checks)
 local colors = {} -- [tooltip] = { r, g, b } for what it shows now (quality / class), or nil
 
 -- our panel sits just under the tooltip's own text (a lower frame level), and the game's border
@@ -23,7 +24,7 @@ end
 
 local function Paint(tip)
   if not ns.db then return end
-  local c = ns.db.colorBorder and colors[tip]
+  local c = colors[tip] -- set only when that colouring is turned on
   local r, g, b = c and c[1], c and c[2], c and c[3]
   local ui = ns.UI
   if ns.db.look == "addon" then
@@ -72,14 +73,34 @@ L.stamp = 0
 local function SetColor(tip, r, g, b) colors[tip] = r and { r, g, b } or nil end
 
 function L.OnItem(tip, link)
-  SetColor(tip, QualityColor(link))
+  if ns.db.colorBorder then SetColor(tip, QualityColor(link)) else SetColor(tip) end
   Paint(tip)
 end
 
+-- an NPC's border: how it feels about you (the game's own reaction colours), grey when someone
+-- else has tagged it
+local REACTION = {
+  hostile = { 0.95, 0.20, 0.20 }, neutral = { 1.00, 0.85, 0.10 }, friendly = { 0.20, 0.85, 0.25 }, tapped = { 0.55, 0.55, 0.55 },
+}
+local function ReactionColor(unit)
+  if not (ns.db.colorNPC and unit) or (UnitIsPlayer and UnitIsPlayer(unit)) then return nil end
+  if UnitIsTapDenied then
+    local ok, tapped = pcall(UnitIsTapDenied, unit)
+    if ok and Readable(tapped) and tapped then return unpack(REACTION.tapped) end
+  end
+  local ok, r = pcall(UnitReaction, unit, "player")
+  if not (ok and Readable(r) and type(r) == "number") then return nil end
+  local c = r <= 3 and REACTION.hostile or r == 4 and REACTION.neutral or REACTION.friendly
+  return c[1], c[2], c[3]
+end
+
 function L.OnUnit(tip, unit)
-  local r, g, b = ClassColor(unit)
+  local r, g, b
+  if ns.db.colorBorder then r, g, b = ClassColor(unit) end
+  local isPlayer = r ~= nil
+  if not r then r, g, b = ReactionColor(unit) end
   SetColor(tip, r, g, b)
-  if r and ns.db.colorBorder then -- the player's name in their class color too
+  if isPlayer and ns.db.colorBorder then -- the player's name in their class color too
     local line = _G[tip:GetName() .. "TextLeft1"]
     if line then line:SetTextColor(r, g, b) end
   end

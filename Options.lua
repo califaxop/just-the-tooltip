@@ -60,21 +60,22 @@ local function BuildPanel(panel)
     { "blizzard", "Blizzard's" },
   }, S("look"), Changed, "JTT style: a dark panel with a bronze border (FlareUI's when it's installed)."), 26, -262))
   track(at(UI.Check(panel, "Border in the item's quality / player's class color", S("colorBorder"), W_, Changed), 26, -292))
-  track(at(UI.Slider(panel, "Size", 220, 0.6, 1.6, 0.05, S("scale"), function(v) return math.floor(v * 100 + 0.5) .. "%" end, Changed), 26, -318))
+  track(at(UI.Check(panel, "NPCs too: red hostile, yellow neutral, green friendly (grey if tapped)", S("colorNPC"), W_, Changed), 26, -316))
+  track(at(UI.Slider(panel, "Size", 220, 0.6, 1.6, 0.05, S("scale"), function(v) return math.floor(v * 100 + 0.5) .. "%" end, Changed), 26, -342))
 
   -- Show ---------------------------------------------------------------------
-  at(UI.Section(panel, "Show", W_), 26, -366)
-  track(at(UI.Check(panel, "Item ID and Spell ID (spells, buffs and debuffs too)", S("ids"), W_), 26, -396))
-  track(at(UI.Check(panel, "Item level on gear", S("itemLevel"), W_), 26, -420))
-  track(at(UI.Check(panel, "Who a unit is targeting (\">> You <<\" when it's you)", S("target"), W_), 26, -444))
-  track(at(UI.Check(panel, "Health numbers on the health bar", S("healthText"), W_), 26, -468))
-  track(at(UI.Check(panel, "Hide right away when you stop hovering something (no fade)", S("instantHide"), W_), 26, -492))
-  track(at(UI.Check(panel, "In combat, hide tooltips for things in the world (hold Shift to see)", S("combatHide"), W_), 26, -516))
-  local n = at(UI.Text(panel, "note", "Lines from your other addons (Equip This!, Questie, What's Training...) still show: Just the Tooltip! changes the game's tooltip rather than replacing it."), 26, -544)
+  at(UI.Section(panel, "Show", W_), 26, -390)
+  track(at(UI.Check(panel, "Item ID and Spell ID (spells, buffs and debuffs too)", S("ids"), W_), 26, -420))
+  track(at(UI.Check(panel, "Item level on gear", S("itemLevel"), W_), 26, -444))
+  track(at(UI.Check(panel, "Who a unit is targeting (\">> You <<\" when it's you)", S("target"), W_), 26, -468))
+  track(at(UI.Check(panel, "Health numbers on the health bar", S("healthText"), W_), 26, -492))
+  track(at(UI.Check(panel, "Hide right away when you stop hovering something (no fade)", S("instantHide"), W_), 26, -516))
+  track(at(UI.Check(panel, "In combat, hide tooltips for things in the world (hold Shift to see)", S("combatHide"), W_), 26, -540))
+  local n = at(UI.Text(panel, "note", "Lines from your other addons (Equip This!, Questie, What's Training...) still show: Just the Tooltip! changes the game's tooltip rather than replacing it."), 26, -568)
   n:SetWidth(W_)
 
   -- hover to see where tooltips go now
-  local preview = at(UI.Button(panel, "Hover to preview", 150, function() end), 26, -590)
+  local preview = at(UI.Button(panel, "Hover to preview", 150, function() end), 26, -614)
   preview:HookScript("OnEnter", function(self)
     GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
     GameTooltip:SetText("Just the Tooltip!")
@@ -90,7 +91,7 @@ local function BuildPanel(panel)
   panel:HookScript("OnShow", function() for _, w in ipairs(refreshers) do w.Refresh() end; showRows() end)
   panel:HookScript("OnHide", function() if ns.Anchor.unlocked then ns.Anchor.Unlock(false) end end)
   showRows()
-  panel.height = 636
+  panel.height = 660
 end
 
 function ns.CreateOptions()
@@ -114,12 +115,12 @@ end
 
 function ns.OpenOptions()
   if not window then
-    window = UI.Window("JustTheTooltipOptionsWindow", 522, 636)
+    window = UI.Window("JustTheTooltipOptionsWindow", 522, 660)
     window:SetPoint("CENTER")
     UI.SetHost(window) -- pop-ups (the bug / idea link) sit over this window
     local ok, e = pcall(BuildPanel, window)
     if not ok then window:Hide(); window = nil; ns.Print("settings failed: " .. tostring(e)); return end
-    window:SetHeight(window.height or 636)
+    window:SetHeight(window.height or 660)
     window:Hide()
   end
   UI.Restyle()

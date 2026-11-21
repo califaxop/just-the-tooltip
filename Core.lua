@@ -16,6 +16,7 @@ ns.DEFAULTS = {
   spot = { point = "BOTTOMRIGHT", x = -90, y = 110 }, -- custom: where (tooltip corner, from that screen corner)
   look = "addon",         -- "addon" (JTT style) or "blizzard"
   colorBorder = true,     -- border in the item's quality / player's class color; class-colored player names
+  colorNPC = true,        -- NPCs' border by reaction: red hostile, yellow neutral, green friendly, grey tapped
   scale = 1,
   ids = true,             -- Item ID / Spell ID
   itemLevel = true,
