@@ -56,6 +56,17 @@ end
 local function RGB(c, a) return c[1], c[2], c[3], a or 1 end
 UI.RGB = RGB
 
+-- The plain style's border: the game's own tooltip border, tinted the bronze of the default
+-- frames' borders (its artwork is light grey, so the tint is a little brighter than the colour seen)
+UI.BLIZZ_EDGE = "Interface\\Tooltips\\UI-Tooltip-Border"
+UI.BLIZZ_BG = "Interface\\Tooltips\\UI-Tooltip-Background"
+UI.BRONZE = { 0.86, 0.66, 0.36 }
+-- the window border colour for a theme
+function UI.BorderColor(th)
+  th = th or UI.Theme()
+  return th.flare and th.accent or UI.BRONZE
+end
+
 function UI.SkinWindow(f, alpha)
   local th = UI.Theme()
   if th.flare then
@@ -63,10 +74,11 @@ function UI.SkinWindow(f, alpha)
       insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     f:SetBackdropColor(1, 1, 1, alpha)
   else
-    f:SetBackdrop({ bgFile = W, edgeFile = W, edgeSize = 1, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+    f:SetBackdrop({ bgFile = UI.BLIZZ_BG, edgeFile = UI.BLIZZ_EDGE, tile = true, tileSize = 16, edgeSize = 16,
+      insets = { left = 4, right = 4, top = 4, bottom = 4 } })
     f:SetBackdropColor(0.03, 0.03, 0.03, alpha)
   end
-  f:SetBackdropBorderColor(RGB(th.accent))
+  f:SetBackdropBorderColor(RGB(UI.BorderColor(th)))
 end
 
 ---------------------------------------------------------------------------

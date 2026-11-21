@@ -114,7 +114,7 @@ function I.OnUnit(tip, data)
   local unit = UnitOf(tip)
   if not unit then return end
   -- a unit in the world (whatever token the game used for it): watch for the mouse leaving it
-  if ns.Anchor.InWorld(tip:GetOwner()) then ns.Anchor.WatchMouseover() end
+  if ns.Anchor.InWorld(tip:GetOwner()) then ns.Anchor.WatchMouseover() else ns.Anchor.MarkUnit() end
   AddTarget(tip, unit)
   ns.Look.OnUnit(tip, unit)
   I.PaintHealth()

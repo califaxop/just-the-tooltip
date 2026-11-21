@@ -29,7 +29,7 @@ local function Paint(tip)
   if ns.db.look == "addon" then
     local s = Skin(tip)
     -- the panel's artwork is set once per settings change, not on every show
-    if s.stamp ~= L.stamp then ui.SkinWindow(s, 0.92); s.stamp = L.stamp; s.accent = ui.Theme().accent end
+    if s.stamp ~= L.stamp then ui.SkinWindow(s, 0.92); s.stamp = L.stamp; s.accent = ui.BorderColor() end
     if r then s:SetBackdropBorderColor(r, g, b, 1) else s:SetBackdropBorderColor(ui.RGB(s.accent)) end
     s:Show()
     if tip.NineSlice then tip.NineSlice:SetAlpha(0) end

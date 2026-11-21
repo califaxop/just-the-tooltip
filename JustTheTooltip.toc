@@ -6,7 +6,7 @@
 ## Version: 1.0.1
 ## X-Curse-Project-ID: 1821207
 ## SavedVariables: JustTheTooltipDB
-## OptionalDeps: FlareUI
+## OptionalDeps: FlareUI, TipTac, TinyTooltip, TinyTooltip-Reforged, ElvUI, Tukui, CursorTooltip
 
 Core.lua
 UI.lua

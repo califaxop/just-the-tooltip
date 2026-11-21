@@ -14,8 +14,24 @@ ev:SetScript("OnEvent", function(_, event, arg1)
     ns.Info.Hook()
     ns.Look.Refresh()
     ns.Print("loaded. Type |cffffff00/jtt|r to set it up.")
+    ns.CheckOthers()
   end
 end)
+
+-- Other tooltip addons: Just the Tooltip! loads after them (OptionalDeps), so where it puts the
+-- tooltip wins. Some also move or restyle it on their own every frame, so say so once.
+local OTHERS = { "TipTac", "TinyTooltip", "TinyTooltip-Reforged", "ElvUI", "Tukui", "CursorTooltip" }
+function ns.CheckOthers()
+  local found = {}
+  for _, name in ipairs(OTHERS) do
+    local loaded = (C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded(name)) or (IsAddOnLoaded and IsAddOnLoaded(name))
+    if loaded then found[#found + 1] = name end
+  end
+  if #found > 0 then
+    ns.Print("|cffff9933also loaded: " .. table.concat(found, ", ") .. ".|r Just the Tooltip! has the last say on where the tooltip goes, "
+      .. "but for the cleanest result turn off that addon's tooltip options (or the addon).")
+  end
+end
 
 SLASH_JUSTTHETOOLTIP1, SLASH_JUSTTHETOOLTIP2 = "/jtt", "/justthetooltip"
 SlashCmdList.JUSTTHETOOLTIP = function(msg)
