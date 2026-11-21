@@ -31,6 +31,9 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 ## Good to know
 - Only tooltips the game would put in the bottom-right corner move. Tooltips that open beside your bags or a window stay next to them.
 
+## Updates
+New versions come out every **Wednesday at 12:00 UTC** (8 PM Philippine time, 8 AM US Eastern). Urgent fixes ship sooner.
+
 ## Feedback
 Found a bug or have an idea? [Open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose): there's a short form for each. The settings window has a "Report a bug / suggest" button with this link too.
 
