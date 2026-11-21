@@ -68,12 +68,13 @@ local function BuildPanel(panel)
   track(at(UI.Check(panel, "Item level on gear", S("itemLevel"), W_), 26, -420))
   track(at(UI.Check(panel, "Who a unit is targeting (\">> You <<\" when it's you)", S("target"), W_), 26, -444))
   track(at(UI.Check(panel, "Health numbers on the health bar", S("healthText"), W_), 26, -468))
-  track(at(UI.Check(panel, "In combat, hide tooltips for things in the world (hold Shift to see)", S("combatHide"), W_), 26, -492))
-  local n = at(UI.Text(panel, "note", "Lines from your other addons (Equip This!, Questie, What's Training...) still show: Just the Tooltip! changes the game's tooltip rather than replacing it."), 26, -520)
+  track(at(UI.Check(panel, "Hide right away when you stop hovering something in the world (no fade)", S("instantHide"), W_), 26, -492))
+  track(at(UI.Check(panel, "In combat, hide tooltips for things in the world (hold Shift to see)", S("combatHide"), W_), 26, -516))
+  local n = at(UI.Text(panel, "note", "Lines from your other addons (Equip This!, Questie, What's Training...) still show: Just the Tooltip! changes the game's tooltip rather than replacing it."), 26, -544)
   n:SetWidth(W_)
 
   -- hover to see where tooltips go now
-  local preview = at(UI.Button(panel, "Hover to preview", 150, function() end), 26, -566)
+  local preview = at(UI.Button(panel, "Hover to preview", 150, function() end), 26, -590)
   preview:HookScript("OnEnter", function(self)
     GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
     GameTooltip:SetText("Just the Tooltip!")
@@ -89,7 +90,7 @@ local function BuildPanel(panel)
   panel:HookScript("OnShow", function() for _, w in ipairs(refreshers) do w.Refresh() end; showRows() end)
   panel:HookScript("OnHide", function() if ns.Anchor.unlocked then ns.Anchor.Unlock(false) end end)
   showRows()
-  panel.height = 612
+  panel.height = 636
 end
 
 function ns.CreateOptions()
@@ -113,12 +114,12 @@ end
 
 function ns.OpenOptions()
   if not window then
-    window = UI.Window("JustTheTooltipOptionsWindow", 522, 612)
+    window = UI.Window("JustTheTooltipOptionsWindow", 522, 636)
     window:SetPoint("CENTER")
     UI.SetHost(window) -- pop-ups (the bug / idea link) sit over this window
     local ok, e = pcall(BuildPanel, window)
     if not ok then window:Hide(); window = nil; ns.Print("settings failed: " .. tostring(e)); return end
-    window:SetHeight(window.height or 612)
+    window:SetHeight(window.height or 636)
     window:Hide()
   end
   UI.Restyle()

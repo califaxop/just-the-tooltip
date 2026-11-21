@@ -113,6 +113,7 @@ function I.OnUnit(tip, data)
   end
   local unit = UnitOf(tip)
   if not unit then return end
+  if ns.Anchor.InWorld(tip:GetOwner()) and unit == "mouseover" then ns.Anchor.WatchMouseover() end
   AddTarget(tip, unit)
   ns.Look.OnUnit(tip, unit)
   I.PaintHealth()

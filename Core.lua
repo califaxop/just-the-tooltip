@@ -21,7 +21,8 @@ ns.DEFAULTS = {
   itemLevel = true,
   target = true,          -- "Target: Name" on units
   healthText = true,      -- numbers on the health bar
-  combatHide = false,     -- hide tooltips for things in the world during combat (Shift shows them)
+  combatHide = false,
+  instantHide = true,     -- world tooltips vanish when you stop hovering (no fade)     -- hide tooltips for things in the world during combat (Shift shows them)
   flareStyle = true,
 }
 

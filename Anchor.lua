@@ -13,23 +13,46 @@ local CORNERS = {
 }
 A.CORNERS = CORNERS
 
-local following = false
+-- One small driver, running only while the tooltip is up and has something to do: follow the
+-- cursor (re-placed only when the mouse actually moved), and/or hide a world tooltip the moment
+-- you stop hovering what it's about (checked 20 times a second, not every frame).
+local following, watching = false, false
+local lastX, lastY, sinceCheck = nil, nil, 0
 local driver = CreateFrame("Frame")
 driver:Hide()
 
-local function FollowCursor()
+local function FollowCursor(force)
   local tip = GameTooltip
-  local c = CORNERS[ns.db.corner] or CORNERS.BOTTOMRIGHT
   local x, y = GetCursorPosition()
+  if not force and x == lastX and y == lastY then return end -- the mouse didn't move: nothing to do
+  lastX, lastY = x, y
+  local c = CORNERS[ns.db.corner] or CORNERS.BOTTOMRIGHT
   local s = tip:GetEffectiveScale()
-  tip:ClearAllPoints()
+  if force then tip:ClearAllPoints() end
   tip:SetPoint(c[1], UIParent, "BOTTOMLEFT", x / s + c[2] * ns.db.offX, y / s + c[3] * ns.db.offY)
 end
-driver:SetScript("OnUpdate", function()
-  if following and GameTooltip:IsShown() then FollowCursor() else following = false; driver:Hide() end
+
+local function Stop() following, watching = false, false; driver:Hide() end
+A.Stop = Stop
+
+driver:SetScript("OnUpdate", function(_, elapsed)
+  if not GameTooltip:IsShown() or not (following or watching) then Stop(); return end
+  if following then FollowCursor() end
+  if watching then
+    sinceCheck = sinceCheck + elapsed
+    if sinceCheck >= 0.05 then
+      sinceCheck = 0
+      if not UnitExists("mouseover") then watching = false; GameTooltip:Hide() end
+    end
+  end
 end)
 
-local function Stop() following = false; driver:Hide() end
+-- a world unit's tooltip: hide it as soon as the mouse leaves the unit (instead of the game's fade)
+function A.WatchMouseover()
+  if not ns.db.instantHide then return end
+  watching, sinceCheck = true, 0
+  driver:Show()
+end
 
 -- your own spot: an invisible frame the tooltip hangs from, dragged into place from the settings
 local spot = CreateFrame("Frame", "JustTheTooltipSpot", UIParent, "BackdropTemplate")
@@ -93,6 +116,7 @@ end
 local function InWorld(parent)
   return parent == nil or parent == UIParent or parent == WorldFrame
 end
+A.InWorld = InWorld
 
 -- runs right after the game put the tooltip at its default spot
 local function OnDefaultAnchor(tip, parent)
@@ -101,7 +125,7 @@ local function OnDefaultAnchor(tip, parent)
   local mode = ns.db.anchor
   if mode == "cursor" and (ns.db.scope == "all" or InWorld(parent)) then
     following = true
-    FollowCursor()
+    FollowCursor(true)
     driver:Show()
   elseif mode == "custom" then
     local p = ns.db.spot.point
@@ -118,4 +142,10 @@ function A.Hook()
   -- anything else placing the tooltip (a bag slot, a button) takes over: stop following
   if hooksecurefunc then hooksecurefunc(GameTooltip, "SetOwner", function() Stop() end) end
   GameTooltip:HookScript("OnHide", Stop)
+  -- the game starts fading a world tooltip when you stop hovering it (units and objects): hide it now
+  if hooksecurefunc and GameTooltip.FadeOut then
+    hooksecurefunc(GameTooltip, "FadeOut", function(tip)
+      if ns.db.instantHide and InWorld(tip:GetOwner()) then tip:Hide() end
+    end)
+  end
 end
