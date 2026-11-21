@@ -1,5 +1,5 @@
--- The extra lines: Item ID / Spell ID, item level, who a unit is targeting, health numbers,
--- and hiding tooltips for things in the world during combat.
+-- The extra lines: Item ID / Spell ID, item level, who a unit is targeting; the health bar
+-- on or off; and hiding tooltips for things in the world during combat.
 local _, ns = ...
 local I = {}
 ns.Info = I
@@ -117,27 +117,13 @@ function I.OnUnit(tip, data)
   if ns.Anchor.InWorld(tip:GetOwner()) then ns.Anchor.WatchMouseover() else ns.Anchor.MarkUnit() end
   AddTarget(tip, unit)
   ns.Look.OnUnit(tip, unit)
-  I.PaintHealth()
 end
 
--- numbers on the health bar under unit tooltips
-local healthText
-local function Short(n)
-  if n >= 1e6 then return format("%.1fm", n / 1e6) elseif n >= 1e4 then return format("%.1fk", n / 1e3) end
-  return tostring(n)
-end
-function I.PaintHealth()
+-- the health bar under unit tooltips can be turned off
+function I.ApplyHealthBar()
   local bar = GameTooltipStatusBar
   if not bar then return end
-  if not healthText then
-    healthText = bar:CreateFontString(nil, "OVERLAY", "TextStatusBarText")
-    healthText:SetPoint("CENTER", 0, 0)
-  end
-  local unit = ns.db.healthText and UnitOf(GameTooltip)
-  local h, m = unit and UnitHealth(unit), unit and UnitHealthMax(unit)
-  if not (Readable(h) and Readable(m) and m and m > 0) then healthText:SetText(""); return end
-  if m == 100 then healthText:SetText(h .. "%") -- some units only report a percent
-  else healthText:SetText(Short(h) .. " / " .. Short(m)) end
+  if not ns.db.healthBar then bar:Hide() elseif GameTooltip:IsShown() and UnitOf(GameTooltip) then bar:Show() end
 end
 
 function I.Hook()
@@ -153,5 +139,8 @@ function I.Hook()
   on(T.Spell, I.OnSpell)
   on(T.UnitAura, I.OnSpell)   -- buffs and debuffs: their spell ID
   on(T.Unit, I.OnUnit)
-  if GameTooltipStatusBar then GameTooltipStatusBar:HookScript("OnValueChanged", I.PaintHealth) end
+  if GameTooltipStatusBar then
+    -- the game shows the bar for every unit: keep it hidden when it's turned off
+    GameTooltipStatusBar:HookScript("OnShow", function(bar) if not ns.db.healthBar then bar:Hide() end end)
+  end
 end

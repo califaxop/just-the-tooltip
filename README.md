@@ -10,7 +10,7 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 - **IDs:** Item ID and Spell ID on items, spells, buffs and debuffs (not added twice if another addon already shows them).
 - **Item level** on gear.
 - **Target line:** who a unit is targeting, with a red ">> You <<" when it's you.
-- **Health numbers** on the tooltip's health bar.
+- **Health bar** under unit tooltips: keep it or turn it off.
 - **Look:** JTT style (a dark panel with a bronze border, FlareUI's when it's installed) or Blizzard's, a border in the item's quality or player's class color (NPCs: red hostile, yellow neutral, green friendly), and a size slider.
 - **No lingering:** tooltips vanish as soon as you stop hovering, in the world or on your unit frames (no fade).
 - **Combat (optional):** hide tooltips for things in the world during combat; hold Shift to see them.
@@ -35,5 +35,5 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 Found a bug or have an idea? [Open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose): there's a short form for each. The settings window has a "Report a bug / suggest" button with this link too.
 
 ## Recent changes
-- **1.1.0:** NPC borders by how they feel about you: red hostile, yellow neutral, green friendly, grey when someone else tagged it (Look, on by default). Fixed a tooltip sometimes staying on screen after you moved off a unit or your player frame (until you hovered something else). Loads after other tooltip addons so its placement wins, and says if one is also loaded. JTT style and the settings use the game's tooltip border in bronze. New `/jtt debug` shows what the tooltip is doing, for bug reports.
-- **1.0.0:** First release: tooltip at the game's spot, by your cursor or your own spot; Item ID / Spell ID, item level, target line, health numbers, JTT style, tooltips that vanish the moment you stop hovering, and hiding in combat.
+- **1.1.0:** NPC borders by how they feel about you: red hostile, yellow neutral, green friendly, grey when someone else tagged it (Look, on by default). The health bar under unit tooltips can be turned off (Show). Fixed a tooltip sometimes staying on screen after you moved off a unit or your player frame (until you hovered something else). Loads after other tooltip addons so its placement wins, and says if one is also loaded. JTT style and the settings use the game's tooltip border in bronze. New `/jtt debug` shows what the tooltip is doing, for bug reports.
+- **1.0.0:** First release: tooltip at the game's spot, by your cursor or your own spot; Item ID / Spell ID, item level, target line, JTT style, tooltips that vanish the moment you stop hovering, and hiding in combat.
