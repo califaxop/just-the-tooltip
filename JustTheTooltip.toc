@@ -1,0 +1,16 @@
+## Interface: 16001
+## Title: Just the Tooltip!
+## Notes: The game's tooltip, made better: put it by your cursor or anywhere you like, with item and spell IDs, item level, who a unit is targeting, and a cleaner look.
+## IconTexture: Interface\AddOns\JustTheTooltip\media\Logo
+## Author: You
+## Version: 1.0.0
+## SavedVariables: JustTheTooltipDB
+## OptionalDeps: FlareUI
+
+Core.lua
+UI.lua
+Anchor.lua
+Look.lua
+Info.lua
+Options.lua
+Init.lua
