@@ -20,6 +20,7 @@ ns.DEFAULTS = {
   scale = 1,
   ids = true,             -- Item ID / Spell ID
   itemLevel = true,
+  sources = true,         -- where gear comes from (needs the Just the Tooltip!: Sources addon, which ships with it)
   target = true,          -- "Target: Name" on units
   healthBar = true,       -- the health bar under unit tooltips
   combatHide = false,

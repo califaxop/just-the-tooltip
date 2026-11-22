@@ -64,7 +64,7 @@ jobs:
           EXTRA=$(cat .extra-addons 2>/dev/null | tr -d '\r' | xargs)
           EXCL=""; for d in $EXTRA; do EXCL="$EXCL --exclude=/$d"; done
           rsync -a --exclude='.git*' --exclude='.github' --exclude='.release' --exclude='.extra-addons' $EXCL \
-            --exclude='README.md' --exclude='CHANGELOG.md' --exclude='*.zip' ./ ".release/$ADDON/"
+            --exclude='README.md' --exclude='CHANGELOG.md' --exclude='*.zip' --exclude='/tools' ./ ".release/$ADDON/"
           for d in $EXTRA; do cp -r "$d" ".release/$d"; done
           (cd .release && zip -qr "$ZIPNAME" "$ADDON" $EXTRA)
           unzip -l ".release/$ZIPNAME"

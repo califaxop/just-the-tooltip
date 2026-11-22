@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: Just the Tooltip!: Sources
+## Notes: Where gear comes from (quest, drop, vendor, chest, profession), for Just the Tooltip!. Loads only when needed.
+## IconTexture: Interface\AddOns\JustTheTooltip\media\Logo
+## Author: You
+## Version: 1.0.0
+## Dependencies: JustTheTooltip
+## LoadOnDemand: 1
+
+Data.lua

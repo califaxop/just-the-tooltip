@@ -9,6 +9,7 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 - **Cursor for the world only (optional):** units and objects follow your cursor, while action bars and buttons keep the game's spot.
 - **IDs:** Item ID and Spell ID on items, spells, buffs and debuffs (not added twice if another addon already shows them).
 - **Item level** on gear.
+- **Where gear comes from:** quest rewards, drops (with the zone), vendors and chests for your faction, world drops (with their levels) and professions, up to three lines plus "+N more". The data comes with the download as a small companion addon, "Just the Tooltip!: Sources", that only loads the first time you hover gear. It's refreshed every week.
 - **Target line:** who a unit is targeting, with a red ">> You <<" when it's you.
 - **Health bar** under unit tooltips: keep it or turn it off.
 - **Look:** JTT style (a dark panel with a bronze border, FlareUI's when it's installed) or Blizzard's, a border in the item's quality or player's class color (NPCs: red hostile, yellow neutral, green friendly), and a size slider.
@@ -38,5 +39,9 @@ New versions come out every **Wednesday at 12:00 UTC** (8 PM Philippine time, 8 
 Found a bug or have an idea? [Open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose): there's a short form for each. The settings window has a "Report a bug / suggest" button with this link too.
 
 ## Recent changes
+- **1.2.0:** Where gear comes from on item tooltips: quest rewards, drops, vendors, chests and professions (Show, on by default). Comes with the companion addon "Just the Tooltip!: Sources", which loads only when you hover gear.
 - **1.1.0:** NPC borders by how they feel about you: red hostile, yellow neutral, green friendly, grey when someone else tagged it (Look, on by default). The health bar under unit tooltips can be turned off (Show). Fixed a tooltip sometimes staying on screen after you moved off a unit or your player frame (until you hovered something else). Loads after other tooltip addons so its placement wins, and says if one is also loaded. JTT style and the settings use the game's tooltip border in bronze. New `/jtt debug` shows what the tooltip is doing, for bug reports.
 - **1.0.0:** First release: tooltip at the game's spot, by your cursor or your own spot; Item ID / Spell ID, item level, target line, JTT style, tooltips that vanish the moment you stop hovering, and hiding in combat.
+
+## Credits
+Where gear comes from uses [QuestieDB](https://github.com/Questie/QuestieDB)'s WoW: Forever data (quest rewards, drops, vendors, chests), by the Questie team and contributors, under the GNU GPL v3; the "Just the Tooltip!: Sources" folder is GPL v3 too. Just the Tooltip! isn't made by or affiliated with Questie.

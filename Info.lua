@@ -58,6 +58,7 @@ function I.OnItem(tip, data)
   local id = type(data) == "table" and Readable(data.id) and data.id
   if not id and link then id = tonumber(link:match("item:(%d+)")) end
   if link then ItemLevel(tip, link) end
+  if ns.Sources then ns.Sources.Add(tip, id) end
   AddID(tip, "Item ID", id)
   ns.Look.OnItem(tip, link)
 end

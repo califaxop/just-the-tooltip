@@ -1,0 +1,33 @@
+# Rebuilds JustTheTooltip_Sources/Data.lua (where gear comes from) from QuestieDB's WoW: Forever data
+# and the game client's tables, every Tuesday and by hand. A change is committed to main; it ships
+# with the next release (this doesn't change the toc's version, so it doesn't release by itself).
+name: Refresh item sources
+
+on:
+  schedule:
+    - cron: "17 3 * * 2"   # Tuesdays 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        run: |
+          pip install lupa
+          python tools/sources/build.py
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- JustTheTooltip_Sources/Data.lua; then echo "no changes"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add JustTheTooltip_Sources/Data.lua
+          git commit -m "Item sources: refresh from QuestieDB and the game's tables"
+          git push
