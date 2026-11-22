@@ -28,6 +28,7 @@ WAGO = "https://wago.tools/db2/{}/csv?build={}"
 GEAR = {2, 4}            # item classes: weapons, armor
 WORLD_DROP = 12          # dropped by more creatures than this: a world drop
 MAX_IDS = 6              # creatures / vendors / objects kept per item (the rest are counted)
+RANDOM_CHEST = 25        # a container holding more pieces of gear than this is random loot ("Solid Chest")
 ALLIANCE = 1 | 4 | 8 | 64
 HORDE = 2 | 16 | 32 | 128
 PROFESSIONS = {164, 165, 197, 202, 333, 171, 185, 129, 356, 186, 182, 393}
@@ -108,6 +109,14 @@ def main():
             cls = row[12]
         return cls in GEAR
 
+    # containers that hold lots of different gear are random loot: not worth naming
+    held = {}
+    for iid, row in items.items():
+        if is_gear(iid, row):
+            for o in lst(row[3]):
+                held[o] = held.get(o, 0) + 1
+    random_chest = {o for o, n in held.items() if n > RANDOM_CHEST}
+
     used_npc, used_quest, used_obj = set(), set(), set()
     out_items = {}
     for iid in sorted(set(int(k) for k in items) | set(crafted)):
@@ -135,7 +144,10 @@ def main():
                 keep = vend[:MAX_IDS]
                 parts.append("v" + ",".join(str(n) for n in keep) + ("+%d" % (len(vend) - len(keep)) if len(vend) > len(keep) else ""))
                 used_npc.update(keep)
-            objs = [o for o in lst(row[3]) if o in objects]
+            allobjs = [o for o in lst(row[3]) if o in objects]
+            objs = [o for o in allobjs if o not in random_chest]
+            if len(objs) < len(allobjs):
+                parts.append("r")  # also in random chests
             if objs:
                 keep = objs[:MAX_IDS]
                 parts.append("o" + ",".join(str(o) for o in keep) + ("+%d" % (len(objs) - len(keep)) if len(objs) > len(keep) else ""))
@@ -181,7 +193,7 @@ def main():
         lines.append("[%d]=%s," % (sk, lua_str(skill_names[sk])))
     lines.append("},")
     # item: ";"-separated parts: q<quests>, d<creatures>[+more], w<minLevel>-<maxLevel> (world drop),
-    # v<vendors>[+more], o<objects>[+more], c<profession>
+    # v<vendors>[+more], o<objects>[+more], c<profession>, r (random chests)
     lines.append("items = {")
     for iid in sorted(out_items):
         lines.append("[%d]=%s," % (iid, lua_str(out_items[iid])))

@@ -9,7 +9,7 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 - **Cursor for the world only (optional):** units and objects follow your cursor, while action bars and buttons keep the game's spot.
 - **IDs:** Item ID and Spell ID on items, spells, buffs and debuffs (not added twice if another addon already shows them).
 - **Item level** on gear.
-- **Where gear comes from:** quest rewards, drops (with the zone), vendors and chests for your faction, world drops (with their levels) and professions, up to three lines plus "+N more". The data comes with the download as a small companion addon, "Just the Tooltip!: Sources", that only loads the first time you hover gear. It's refreshed every week.
+- **Where gear comes from:** quest rewards, boss and elite drops (with the zone), vendors and chests for your faction, professions and world drops (with their levels), most useful first, up to three lines plus "+N more". Gear that only comes from random-loot chests just says so. The data comes with the download as a small companion addon, "Just the Tooltip!: Sources", that only loads the first time you hover gear. It's refreshed every week.
 - **Target line:** who a unit is targeting, with a red ">> You <<" when it's you.
 - **Health bar** under unit tooltips: keep it or turn it off.
 - **Look:** JTT style (a dark panel with a bronze border, FlareUI's when it's installed) or Blizzard's, a border in the item's quality or player's class color (NPCs: red hostile, yellow neutral, green friendly), and a size slider.

@@ -73,17 +73,19 @@ local function Lines(id)
   local mine = UnitFactionGroup and UnitFactionGroup("player")
   mine = (mine == "Alliance" and "A") or (mine == "Horde" and "H") or nil
   local out, more, seen = {}, 0, {}
-  local function add(left, right) -- (two chests of the same name: one line)
+  -- most useful first: quests, boss and elite drops, drops, vendors, professions, world drops, chests
+  local function add(left, right, prio) -- (two chests of the same name: one line)
     if seen[left] then return end
     seen[left] = true
-    out[#out + 1] = { left, right or "" }
+    out[#out + 1] = { left, right or "", prio, #out }
   end
+  local randomChests = false
   for part in (entry .. ";"):gmatch("([^;]+);") do
     local kind, rest = part:sub(1, 1), part:sub(2)
     if kind == "q" then
       for _, q in ipairs((Ids(rest))) do
         local r = Split(d.quests[q])
-        if r[1] and (r[3] == "" or not mine or r[3] == mine) then add("Quest: " .. r[1], Levels(r[2])) end
+        if r[1] and (r[3] == "" or not mine or r[3] == mine) then add("Quest: " .. r[1], Levels(r[2]), 1) end
       end
     elseif kind == "d" or kind == "v" then
       local ids, extra = Ids(rest)
@@ -93,26 +95,33 @@ local function Lines(id)
         if r[1] then
           if kind == "d" then
             local rank = RANK[tonumber(r[4]) or 0]
-            add("Drop: " .. r[1] .. (rank and (GREY .. " (" .. rank .. ")|r") or ""), Zone(r[5]))
+            add("Drop: " .. r[1] .. (rank and (GREY .. " (" .. rank .. ")|r") or ""), Zone(r[5]), rank and 2 or 3)
           elseif not mine or (r[6] or ""):find(mine) then
-            add("Vendor: " .. r[1], Zone(r[5]))
+            add("Vendor: " .. r[1], Zone(r[5]), 4)
           end
         end
       end
     elseif kind == "w" then
       local a, b = rest:match("(%d+)%-(%d+)")
-      add("World drop", Levels(a, b))
+      add("World drop", Levels(a, b), 6)
     elseif kind == "o" then
       local ids, extra = Ids(rest)
       more = more + extra
       for _, o in ipairs(ids) do
         local r = Split(d.objects[o])
-        if r[1] then add("Found in: " .. r[1], Zone(r[2])) end
+        -- (an "Alliance Chest" when you're Horde: not yours to open)
+        local other = (mine == "A" and "^Horde ") or (mine == "H" and "^Alliance ") or nil
+        if r[1] and not (other and r[1]:find(other)) then add("Found in: " .. r[1], Zone(r[2]), 7) end
       end
     elseif kind == "c" then
-      add("Crafted: " .. (d.skills[tonumber(rest)] or "a profession"))
+      add("Crafted: " .. (d.skills[tonumber(rest)] or "a profession"), nil, 5)
+    elseif kind == "r" then
+      randomChests = true
     end
   end
+  -- random-loot chests ("Solid Chest"): only when there's nothing better to say
+  if #out == 0 and randomChests then add("Random chests and containers", nil, 8) end
+  table.sort(out, function(a, b) if a[3] ~= b[3] then return a[3] < b[3] end return a[4] < b[4] end)
   if #out > MAX_LINES then
     more = more + #out - MAX_LINES
     for i = #out, MAX_LINES + 1, -1 do out[i] = nil end
