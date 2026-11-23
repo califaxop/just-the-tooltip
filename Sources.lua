@@ -61,11 +61,27 @@ local function Levels(a, b)
   if b ~= 0 and b ~= a then return format("Level %d-%d", a, b) end
   return "Level " .. a
 end
+-- "12,34:15,56+3": the IDs, how many more, and drop chances (percent) where given ("34:15")
 local function Ids(s)
-  local list, more = s:match("^([%d,]*)%+?(%d*)$")
-  local t = {}
-  for id in (list or ""):gmatch("%d+") do t[#t + 1] = tonumber(id) end
-  return t, tonumber(more) or 0
+  local list, more = s:match("^([%d,:%.]*)%+?(%d*)$")
+  local t, chance = {}, {}
+  for id, c in (list or ""):gmatch("(%d+):?([%d%.]*)") do
+    t[#t + 1] = tonumber(id)
+    if c ~= "" then chance[tonumber(id)] = tonumber(c) end
+  end
+  return t, tonumber(more) or 0, chance
+end
+-- a drop chance as shown: "40%", "2.5%", "0.4%", "<0.1%" (Classic's loot tables)
+local function Chance(c)
+  if not c then return nil end
+  if c >= 9.95 then return format("%d%%", math.floor(c + 0.5)) end
+  if c >= 0.1 then return (format("%.1f", c):gsub("%.0$", "")) .. "%" end
+  return "<0.1%"
+end
+local function WithChance(right, c)
+  local t = Chance(c)
+  if not t then return right end
+  return (right and right ~= "") and (right .. "  " .. t) or t
 end
 
 -- Icons: the game's own (the world map's dungeon and raid portals, the quest marker), each with an
@@ -137,7 +153,7 @@ local function Build(d, entry)
         if r[1] and (r[3] == "" or not mine or r[3] == mine) then add("Quest", r[1], Levels(r[2]), 1, r[1]) end
       end
     elseif kind == "d" or kind == "v" then
-      local ids, extra = Ids(rest)
+      local ids, extra, chance = Ids(rest)
       more[kind] = (more[kind] or 0) + extra
       for _, n in ipairs(ids) do
         local r = Split(d.npcs[n])
@@ -146,12 +162,13 @@ local function Build(d, entry)
           if kind == "d" then
             local inst = instances[tonumber(r[5]) or 0]
             local rankN = tonumber(r[4]) or 0
+            -- (the drop chance on the right)
             if inst then -- in a dungeon or raid: "Herod - Scarlet Monastery"
-              add(inst == 2 and "Raid" or "Dungeon", r[1] .. (zone ~= "" and (" - " .. zone) or ""), nil, 2, r[1], zone)
+              add(inst == 2 and "Raid" or "Dungeon", r[1] .. (zone ~= "" and (" - " .. zone) or ""), WithChance(nil, chance[n]), 2, r[1], zone).chance = chance[n]
             else -- out in the world: the creature, its rank, and where
               local rank = RANK[rankN]
               add(rankN == 3 and "Boss" or "Enemy", r[1] .. ((rank and rankN ~= 3) and (GREY .. " (" .. rank .. ")|r") or ""),
-                zone, rank and 2 or 3, r[1], zone)
+                WithChance(zone, chance[n]), rank and 2 or 3, r[1], zone).chance = chance[n]
             end
           elseif not mine or (r[6] or ""):find(mine) then
             add("Vendor", r[1], zone, 4, r[1], zone)
@@ -433,6 +450,8 @@ function S.Add(tip, id)
       for _, c in ipairs(covered) do if c:find(zone, 1, true) or zone:find(c, 1, true) then return true end end
       return false
     end
+    local chanceOf = {} -- (our drop chances, for NeedRoll's lines naming the same creature)
+    for _, l in ipairs(lines) do if l.chance and l.name then chanceOf[l.name:lower()] = l.chance end end
     for _, l in ipairs(lines) do
       local isDrop = l.kind == "Dungeon" or l.kind == "Raid" or l.kind == "Boss" or l.kind == "Enemy"
       if not (isDrop and coveredAny and (l.zone == "" or inCovered(l.zone))) then
@@ -441,7 +460,11 @@ function S.Add(tip, id)
       end
     end
     for _, l in ipairs(nrRes.lines) do
-      if not (l.kind == "Quest" and quests[l.name:lower()]) then merged[#merged + 1] = l end
+      if not (l.kind == "Quest" and quests[l.name:lower()]) then
+        local c = l.kind ~= "Quest" and l.name and chanceOf[l.name:lower()]
+        if c then l = setmetatable({ right = WithChance(l.right, c) }, { __index = l }) end
+        merged[#merged + 1] = l
+      end
     end
     table.sort(merged, function(a, b)
       if a.prio ~= b.prio then return a.prio < b.prio end
