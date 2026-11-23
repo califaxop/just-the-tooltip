@@ -38,30 +38,43 @@ A.Trace = Trace
 -- The frame the mouse is over, if it's part of the interface (chat, bars, unit frames...) rather
 -- than the 3D world. The game keeps the last unit under the mouse as "mouseover" while the mouse is
 -- over the interface, so a world unit's tooltip would stay up until you're back over the world.
-local function OverInterface()
-  local focus
+local function TopFocus()
   if GetMouseFoci then
     local ok, t = pcall(GetMouseFoci)
-    focus = ok and type(t) == "table" and t[1] or nil
+    return ok and type(t) == "table" and t[1] or nil
   elseif GetMouseFocus then
     local ok, f = pcall(GetMouseFocus)
-    focus = ok and f or nil
+    return ok and f or nil
   end
+end
+local startFocus -- what was under the mouse when the unit's tooltip came up (its plate, an addon's frame...)
+local function OverInterface()
+  local focus = TopFocus()
   if not focus or focus == WorldFrame or focus == UIParent then return nil end
+  -- only once the mouse has moved onto something else: what it was over when the tooltip came up
+  -- is part of hovering the unit
+  if focus == startFocus then return nil end
   -- (a nameplate is the unit itself, and the tooltip is no part of the interface we're leaving for)
   if focus == GameTooltip then return nil end
-  -- (FlareUI's and EllesmereUI's plates are inside the game's nameplate frames: walk up to see)
-  local fr, name = focus, nil
-  for i = 1, 12 do
+  -- Up its parents: inside a nameplate (FlareUI's and EllesmereUI's plates are in the game's), it's
+  -- the unit; a named piece of the interface (chat, bars, unit frames, an addon's window), you've
+  -- left the unit; nothing named at all (an overlay some addon shows over the world), ignored.
+  local fr, named = focus, nil
+  for _ = 1, 12 do
     local okN, n = pcall(fr.GetName, fr)
     n = okN and type(n) == "string" and n or nil
-    if i == 1 then name = n end
     if n and n:find("^NamePlate") then return nil end
+    named = named or n
     local okP, p = pcall(fr.GetParent, fr)
     if not okP or not p or p == UIParent or p == WorldFrame then break end
     fr = p
   end
-  return focus, name or "a frame"
+  if not named then
+    local okD, dn = pcall(focus.GetDebugName, focus)
+    Trace("mouse over an unnamed frame (" .. tostring(okD and dn or "?") .. "): ignored", "unnamed")
+    return nil
+  end
+  return focus, named
 end
 
 local function FollowCursor(force)
@@ -144,6 +157,7 @@ function A.MarkUnit() worldUnit = true end
 -- not be readable; without "no fade" the second still starts the game's fade, which it can skip.)
 function A.WatchMouseover()
   worldUnit = true
+  startFocus = TopFocus()
   if trace then
     t0, traced = GetTime(), {}
     Trace(format("unit tooltip shown (no fade: %s, cursor check: %s)", tostring(ns.db.instantHide),
@@ -163,6 +177,7 @@ end
 -- until you hovered something else)
 function A.WatchWorldThing()
   worldThing = true
+  startFocus = TopFocus()
   if C_TooltipInfo and C_TooltipInfo.GetWorldCursor then
     thingWatch, seenCursor, sinceThing = true, false, 0
     driver:Show()
