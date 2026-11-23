@@ -372,7 +372,13 @@ function S.Release() -- after it has (and on logout, to be safe)
   if held and type(NeedRollDB) == "table" then NeedRollDB.tooltipSources = heldValue end
   held = false
 end
-S.Holding = function() return S.canHold and CanHold() end
+-- Our first look at an item tooltip: registered as we load, before NeedRoll does (it loads after
+-- us), so it runs before NeedRoll's and holds its lines off. (Also a pre-call where the game has
+-- them: Info.lua.)
+if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Item then
+  TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tip) if ns.db then S.Hold(tip) end end)
+  S.canHold = true
+end
 
 local nrCache = {}
 local raidNames
@@ -401,6 +407,7 @@ local function FromNeedRoll(id)
   local ok = pcall(scanTip.SetItemByID, scanTip, id)
   NeedRollDB.tooltipSources = before
   if ok then
+    local afterNR = false
     for i = 2, scanTip:NumLines() do
       local fs = _G["JustTheTooltipNeedRollScanTextLeft" .. i]
       local okT, t = false, nil
@@ -416,11 +423,16 @@ local function FromNeedRoll(id)
                 name = who ~= "Trash" and who or nil, zone = where }
             l.order, l.nr = #res.lines, true
             res.lines[#res.lines + 1] = l
+            afterNR = true
           end
         else
-          local n = t:match("^%+(%d+)") -- ("+2 more")
+          -- its "+2 more", right under its lines (not an item's "+11 Stamina")
+          local n = afterNR and t:match("^%+(%d+)")
           if n then res.more = res.more + tonumber(n) end
+          afterNR = false
         end
+      else
+        afterNR = false
       end
     end
   end
@@ -458,7 +470,10 @@ end
 function S.Add(tip, id)
   if not (ns.db.sources and Readable(id) and type(id) == "number") then return end
   local lines, extra = Lines(id)
-  local nrRes = S.canHold and CanHold() and FromNeedRoll(id) or nil
+  local text, nr = Already(tip)
+  -- NeedRoll's lines held off this tooltip: show what it knows our way. (They're there after all:
+  -- leave them, and add only what they don't say, below.)
+  local nrRes = S.canHold and CanHold() and #nr == 0 and FromNeedRoll(id) or nil
   if nrRes and #nrRes.lines > 0 then
     -- NeedRoll's dungeons replace our drops there; its quests join ours (one line per quest)
     local covered, quests, merged, coveredAny = {}, {}, {}, false
@@ -491,7 +506,6 @@ function S.Add(tip, id)
     lines, extra = merged, e
   end
   if #lines == 0 then return end
-  local text, nr = Already(tip)
   -- NeedRoll's drop lines (its quest lines have the quest marker)
   local nrDropLines = {}
   for _, t in ipairs(nr) do if not t:find("crosshair_quest", 1, true) then nrDropLines[#nrDropLines + 1] = t end end
