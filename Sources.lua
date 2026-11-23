@@ -1,6 +1,6 @@
 -- Where gear comes from, under a "Source:" heading naming the kinds (Quest, Dungeon, Raid, Boss,
 -- Enemy, Vendor, Crafted, Chest, World Drop, Random Chests), one line each with its icon:
---   Source: Dungeon, Quest
+--   Source: Dungeon, Quest          (one source: on this line, "Source: [chest] Random chests and containers")
 --     [portal] Herod - Scarlet Monastery
 --     [!] In the Name of the Light            Level 40
 -- The data is a separate addon (JustTheTooltip_Sources), loaded the first time you hover gear with
@@ -163,7 +163,7 @@ local function Lines(id)
       end
     elseif kind == "w" then
       local a, b = rest:match("(%d+)%-(%d+)")
-      add("World Drop", "Enemies anywhere", Levels(a, b), 6)
+      add("World Drop", "World drop", Levels(a, b), 6)
     elseif kind == "o" then
       local ids, extra = Ids(rest)
       more.o = (more.o or 0) + extra
@@ -181,7 +181,7 @@ local function Lines(id)
     end
   end
   -- random-loot chests ("Solid Chest"): only when there's nothing better to say
-  if #out == 0 and randomChests then add("Random Chests", "Chests and containers", nil, 8) end
+  if #out == 0 and randomChests then add("Random Chests", "Random chests and containers", nil, 8) end
   table.sort(out, function(a, b) if a.prio ~= b.prio then return a.prio < b.prio end return a.order < b.order end)
   cache[id] = { out, more }
   return out, more
@@ -258,6 +258,12 @@ function S.Add(tip, id)
     if not (nrDrops and k == "d") then more = more + n end -- (NeedRoll counts its own drops)
   end
   if #show == 0 and more == 0 then return end
+  -- just one: on the heading line ("Source: [chest] Random chests and containers")
+  if #show == 1 and more == 0 then
+    local l = show[1]
+    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r", GREY .. l.right .. "|r")
+    return
+  end
   -- "Source: Dungeon, Quest", then a line for each
   local kinds, named = {}, {}
   for _, l in ipairs(show) do
