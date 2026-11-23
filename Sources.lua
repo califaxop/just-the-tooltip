@@ -71,18 +71,8 @@ local function Ids(s)
   end
   return t, tonumber(more) or 0, chance
 end
--- a drop chance as shown: "40%", "2.5%", "0.4%", "<0.1%" (Classic's loot tables)
-local function Chance(c)
-  if not c then return nil end
-  if c >= 9.95 then return format("%d%%", math.floor(c + 0.5)) end
-  if c >= 0.1 then return (format("%.1f", c):gsub("%.0$", "")) .. "%" end
-  return "<0.1%"
-end
-local function WithChance(right, c)
-  local t = Chance(c)
-  if not t then return right end
-  return (right and right ~= "") and (right .. "  " .. t) or t
-end
+-- (Drop chances aren't shown: they're Classic's loot tables, and WoW: Forever's may differ. They
+-- only decide which drops are listed first, so "+N more" holds the least likely.)
 
 -- Icons: the game's own (the world map's dungeon and raid portals, the quest marker), each with an
 -- older texture to fall back on where the client lacks the atlas.
@@ -129,6 +119,17 @@ local function Icon(kind, skill)
   return icons[kind]
 end
 
+-- most useful first: quests, drops (the likeliest first), vendors, professions, world drops, chests
+local function Sort(t)
+  table.sort(t, function(a, b)
+    if a.prio ~= b.prio then return a.prio < b.prio end
+    local ca, cb = a.chance or 0, b.chance or 0
+    if ca ~= cb then return ca > cb end
+    if (a.nr or false) ~= (b.nr or false) then return b.nr or false end
+    return a.order < b.order
+  end)
+end
+
 -- an item's sources from `entry` (our data's format, looked up in `d`): { { kind, text, right,
 -- prio, order, name, zone, skill }, ... } and how many more of each kind there are past those named
 local function Build(d, entry)
@@ -162,13 +163,13 @@ local function Build(d, entry)
           if kind == "d" then
             local inst = instances[tonumber(r[5]) or 0]
             local rankN = tonumber(r[4]) or 0
-            -- (the drop chance on the right)
+            -- (all drops together, the likeliest first: see Sort)
             if inst then -- in a dungeon or raid: "Herod - Scarlet Monastery"
-              add(inst == 2 and "Raid" or "Dungeon", r[1] .. (zone ~= "" and (" - " .. zone) or ""), WithChance(nil, chance[n]), 2, r[1], zone).chance = chance[n]
+              add(inst == 2 and "Raid" or "Dungeon", r[1] .. (zone ~= "" and (" - " .. zone) or ""), nil, 2, r[1], zone).chance = chance[n]
             else -- out in the world: the creature, its rank, and where
               local rank = RANK[rankN]
               add(rankN == 3 and "Boss" or "Enemy", r[1] .. ((rank and rankN ~= 3) and (GREY .. " (" .. rank .. ")|r") or ""),
-                WithChance(zone, chance[n]), rank and 2 or 3, r[1], zone).chance = chance[n]
+                zone, 2, r[1], zone).chance = chance[n]
             end
           elseif not mine or (r[6] or ""):find(mine) then
             add("Vendor", r[1], zone, 4, r[1], zone)
@@ -196,7 +197,7 @@ local function Build(d, entry)
   end
   -- random-loot chests ("Solid Chest"): only when there's nothing better to say
   if #out == 0 and randomChests then add("Random Chests", "Random chests and containers", nil, 8) end
-  table.sort(out, function(a, b) if a.prio ~= b.prio then return a.prio < b.prio end return a.order < b.order end)
+  Sort(out)
   return out, more
 end
 
@@ -450,7 +451,7 @@ function S.Add(tip, id)
       for _, c in ipairs(covered) do if c:find(zone, 1, true) or zone:find(c, 1, true) then return true end end
       return false
     end
-    local chanceOf = {} -- (our drop chances, for NeedRoll's lines naming the same creature)
+    local chanceOf = {} -- (our drop chances, to place NeedRoll's lines naming the same creature)
     for _, l in ipairs(lines) do if l.chance and l.name then chanceOf[l.name:lower()] = l.chance end end
     for _, l in ipairs(lines) do
       local isDrop = l.kind == "Dungeon" or l.kind == "Raid" or l.kind == "Boss" or l.kind == "Enemy"
@@ -462,15 +463,11 @@ function S.Add(tip, id)
     for _, l in ipairs(nrRes.lines) do
       if not (l.kind == "Quest" and quests[l.name:lower()]) then
         local c = l.kind ~= "Quest" and l.name and chanceOf[l.name:lower()]
-        if c then l = setmetatable({ right = WithChance(l.right, c) }, { __index = l }) end
+        if c then l = setmetatable({ chance = c }, { __index = l }) end -- (ours for that creature: for the order)
         merged[#merged + 1] = l
       end
     end
-    table.sort(merged, function(a, b)
-      if a.prio ~= b.prio then return a.prio < b.prio end
-      if (a.nr or false) ~= (b.nr or false) then return b.nr or false end
-      return a.order < b.order
-    end)
+    Sort(merged)
     local e = {}
     for k, n in pairs(extra) do if not (coveredAny and k == "d") then e[k] = n end end
     e.nr = nrRes.more

@@ -72,7 +72,7 @@ local function BuildPanel(panel)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText("Where gear comes from", 1, 1, 1)
     GameTooltip:AddLine("Quest rewards, drops, vendors, chests and professions, for your faction. From QuestieDB's WoW: Forever data (by the Questie team, GPLv3) and the game's own tables; with NeedRoll or Questie installed, what they know too.", 0.85, 0.85, 0.85, true)
-    GameTooltip:AddLine("Drop chances: CMaNGOS Classic-DB (GPLv3), Classic's loot tables, so WoW: Forever's may differ.", 0.85, 0.85, 0.85, true)
+    GameTooltip:AddLine("Drops are listed likeliest first (CMaNGOS Classic-DB's loot tables, GPLv3); the chances aren't shown, since WoW: Forever's may differ.", 0.85, 0.85, 0.85, true)
     if not ns.Sources.Available() then GameTooltip:AddLine("Needs the \"Just the Tooltip!: Sources\" addon (it comes in the same download): turn it on in the AddOns list.", 1, 0.3, 0.3, true) end
     GameTooltip:Show()
   end)
