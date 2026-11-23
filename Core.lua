@@ -26,6 +26,7 @@ ns.DEFAULTS = {
   combatHide = false,
   instantHide = true,     -- world tooltips vanish when you stop hovering (no fade)     -- hide tooltips for things in the world during combat (Shift shows them)
   flareStyle = true,
+  euiStyle = true,       -- EllesmereUI look when EllesmereUI is installed (its skinning API)
 }
 
 local function Copy(v)

@@ -30,7 +30,21 @@ local function Paint(tip)
   if ns.db.look == "addon" then
     local s = Skin(tip)
     -- the panel's artwork is set once per settings change, not on every show
-    if s.stamp ~= L.stamp then ui.SkinWindow(s, 0.92); s.stamp = L.stamp; s.accent = ui.BorderColor() end
+    if s.stamp ~= L.stamp then
+      local S = ui.EUI and ui.EUI()
+      if S then
+        -- EllesmereUI style: its flat panel colour and a thin border (a window shell would add a title strip)
+        s:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1,
+          insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+        local okP, pr, pg, pb = pcall(S.GetPanelColor)
+        if not (okP and pr) then pr, pg, pb = 0.07, 0.07, 0.08 end
+        s:SetBackdropColor(pr, pg, pb, 0.94)
+        s.accent = { 0.28, 0.28, 0.28 }
+      else
+        ui.SkinWindow(s, 0.92); s.accent = ui.BorderColor()
+      end
+      s.stamp = L.stamp
+    end
     if r then s:SetBackdropBorderColor(r, g, b, 1) else s:SetBackdropBorderColor(ui.RGB(s.accent)) end
     s:Show()
     if tip.NineSlice then tip.NineSlice:SetAlpha(0) end
@@ -69,6 +83,8 @@ local function ClassColor(unit)
 end
 
 L.stamp = 0
+-- EllesmereUI's looks changed: repaint the panels on their next show
+function ns.OnLooksChanged() L.stamp = L.stamp + 1 end
 
 local function SetColor(tip, r, g, b) colors[tip] = r and { r, g, b } or nil end
 

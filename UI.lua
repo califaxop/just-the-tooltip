@@ -34,13 +34,61 @@ function UI.FlareBorder()
   return path or "Interface/AddOns/FlareUI/Media/Borders/FlareUI-Frames.tga"
 end
 
+-- EllesmereUI style: EllesmereUI's own skinning API (EllesmereUI.RegisterSkin, see its SKINNING_API.md)
+-- paints the window shell in the player's EllesmereUI theme; our widgets take its live accent colour,
+-- panel colour and UI font. It hands us S once, at login, unless the player turned skinning off for us.
+function UI.HasEllesmere() return type(EllesmereUI) == "table" and EllesmereUI.RegisterSkin ~= nil end
+if UI.HasEllesmere() then
+  EllesmereUI.RegisterSkin("JustTheTooltip", function(S)
+    UI.euiSkin = S
+    -- (ns.OnLooksChanged: the addon's own frames that follow the style, beyond its windows)
+    local function again() UI.Restyle(); if ns.OnLooksChanged then pcall(ns.OnLooksChanged) end end
+    if S.OnLooksChanged then S.OnLooksChanged(again) end
+    again()
+  end)
+end
+function UI.EUI()
+  local S = UI.euiSkin
+  if S and not (ns.db and ns.db.euiStyle == false) and (not S.IsEnabled or S.IsEnabled()) then return S end
+end
+
+-- the player's EllesmereUI font, as font objects (made once per font)
+local euiFonts, euiN = {}, 0
+local function EUIFont(S, size)
+  local ok, path, flag = pcall(S.GetFont)
+  if not (ok and type(path) == "string") then return nil end
+  local key = path .. size .. tostring(flag)
+  if not euiFonts[key] then
+    euiN = euiN + 1
+    local f = CreateFont("JustTheTooltipEUIFont" .. euiN)
+    f:SetFont(path, size, flag or "")
+    euiFonts[key] = f
+  end
+  return euiFonts[key]
+end
+
 function UI.Theme()
-  local flare = (not ns.db or ns.db.flareStyle ~= false) and UI.FlareBorder() ~= nil
+  local S = UI.EUI()
+  local flare = not S and (not ns.db or ns.db.flareStyle ~= false) and UI.FlareBorder() ~= nil
   local th = {}
   for k, v in pairs(flare and PALETTES.flare or PALETTES.plain) do th[k] = v end
   th.flare = flare
   th.headerFont = FontObj("ObjectiveTrackerHeaderFont", "GameFontNormalMed2", "GameFontNormal")
   th.lineFont = FontObj("ObjectiveTrackerLineFont", "ObjectiveFont", "GameFontHighlight")
+  if S then
+    -- EllesmereUI: white text, flat dark controls with thin grey borders, its accent for what's
+    -- selected or checked
+    local ok, r, g, b = pcall(S.GetAccentColor)
+    local acc = ok and r and { r, g, b } or { 0.047, 0.824, 0.616 }
+    th.eui = true
+    th.header = { 1, 1, 1 }; th.title = { 1, 1, 1 }; th.hover = acc
+    th.line = { 0.82, 0.82, 0.82 }; th.dim = { 0.55, 0.55, 0.55 }
+    th.accent = acc; th.box = { 0.16, 0.16, 0.16 }; th.edge = { 0.28, 0.28, 0.28 }; th.mark = acc
+    th.headerFont = EUIFont(S, 14) or th.headerFont
+    th.lineFont = EUIFont(S, 12) or th.lineFont
+  end
+  th.edge = th.edge or th.accent  -- control borders
+  th.mark = th.mark or th.title   -- the tick in a checkbox
   return th
 end
 
@@ -67,8 +115,19 @@ function UI.BorderColor(th)
   return th.flare and th.accent or UI.BRONZE
 end
 
+local shelled = setmetatable({}, { __mode = "k" }) -- windows EllesmereUI has painted
 function UI.SkinWindow(f, alpha)
   local th = UI.Theme()
+  if th.eui then
+    -- EllesmereUI paints the shell itself (once; it keeps it in step with the player's theme)
+    if not shelled[f] then
+      f:SetBackdrop(nil)
+      local ok = pcall(UI.euiSkin.Shell, f)
+      shelled[f] = ok
+      if not ok then f:SetBackdrop({ bgFile = W }); f:SetBackdropColor(0.06, 0.06, 0.06, alpha) end
+    end
+    return
+  end
   if th.flare then
     f:SetBackdrop({ bgFile = DIALOG_BG, edgeFile = UI.FlareBorder(), tile = false, tileSize = 0, edgeSize = 16,
       insets = { left = 3, right = 3, top = 3, bottom = 3 } })
@@ -110,6 +169,7 @@ function UI.Section(parent, str, width)
   div:SetPoint("TOPLEFT", 0, -18); div:SetWidth(width)
   UI.Skin(function(th)
     if th.flare then div:SetTexture(DIVIDER); div:SetVertexColor(1, 1, 1, 1); div:SetHeight(8)
+    elseif th.eui then div:SetColorTexture(RGB(th.edge, 1)); div:SetHeight(1)
     else div:SetColorTexture(RGB(th.accent, 0.7)); div:SetHeight(1) end
   end)
   return f
@@ -134,8 +194,8 @@ function UI.Check(parent, label, opt, width, onChange)
   local function paint(th)
     th = th or UI.Theme()
     box:SetBackdropColor(0, 0, 0, 0.55)
-    box:SetBackdropBorderColor(RGB(th.accent, hover and active and 1 or 0.8))
-    mark:SetVertexColor(RGB(th.title))
+    box:SetBackdropBorderColor(RGB((hover and active) and th.accent or th.edge, hover and active and 1 or 0.8))
+    mark:SetVertexColor(RGB(th.mark))
     text:SetTextColor(RGB((hover and active) and th.hover or th.line))
   end
   UI.Skin(paint)
@@ -222,8 +282,13 @@ function UI.Button(parent, label, width, onClick)
   local hover, active = false, true
   local function paint(th)
     th = th or UI.Theme()
-    b:SetBackdropColor(RGB(th.box, (hover and active) and 0.55 or 0.3))
-    b:SetBackdropBorderColor(RGB(th.accent, (hover and active) and 1 or 0.8))
+    if th.eui then -- flat dark, a subtle lift on hover
+      b:SetBackdropColor(RGB(th.box, (hover and active) and 1 or 0.85))
+      b:SetBackdropBorderColor(RGB((hover and active) and th.accent or th.edge, 1))
+    else
+      b:SetBackdropColor(RGB(th.box, (hover and active) and 0.55 or 0.3))
+      b:SetBackdropBorderColor(RGB(th.accent, (hover and active) and 1 or 0.8))
+    end
     fs:SetTextColor(RGB((hover and active) and th.hover or th.title))
   end
   UI.Skin(paint)
@@ -289,7 +354,7 @@ function UI.Edit(parent, width, opt, placeholder, spells, numeric)
     th = th or UI.Theme()
     e:SetFontObject(th.lineFont); e:SetTextColor(RGB(th.title))
     e:SetBackdropColor(0, 0, 0, 0.55)
-    e:SetBackdropBorderColor(RGB(e:HasFocus() and th.title or th.accent, e:HasFocus() and 0.9 or 0.7))
+    e:SetBackdropBorderColor(RGB(e:HasFocus() and (th.eui and th.accent or th.title) or th.edge, e:HasFocus() and 0.9 or 0.7))
   end
   UI.Skin(paint)
   local function showPh() ph:SetShown((e:GetText() or "") == "" and not e:HasFocus()) end
@@ -351,8 +416,12 @@ function UI.Popup(name, width, height)
   win:SetFrameStrata("FULLSCREEN_DIALOG")
   win:SetMovable(false); win:SetScript("OnDragStart", nil); win:SetScript("OnDragStop", nil)
   local solid = win:CreateTexture(nil, "BACKGROUND", nil, -8)
-  solid:SetColorTexture(0.04, 0.035, 0.03, 1)
   solid:SetPoint("TOPLEFT", 3, -3); solid:SetPoint("BOTTOMRIGHT", -3, 3)
+  UI.Skin(function(th) -- solid, in EllesmereUI's panel colour when its style is on
+    local ok, r, g, b = false
+    if th.eui and UI.euiSkin and UI.euiSkin.GetPanelColor then ok, r, g, b = pcall(UI.euiSkin.GetPanelColor) end
+    if ok and r then solid:SetColorTexture(r, g, b, 1) else solid:SetColorTexture(0.04, 0.035, 0.03, 1) end
+  end)
   win.shade = CreateFrame("Frame", nil, win)
   win.shade:EnableMouse(true) -- clicks on the window behind go nowhere while this is open
   local dim = win.shade:CreateTexture(nil, "BACKGROUND")
@@ -391,7 +460,7 @@ function UI.Tabs(win, defs, x0, y, pageW, pageH)
   line:SetPoint("TOPLEFT", x0, y); line:SetPoint("TOPRIGHT", -x0, y); line:SetHeight(1)
   local function paint(th)
     th = th or UI.Theme()
-    line:SetColorTexture(RGB(th.accent, 0.5))
+    line:SetColorTexture(RGB(th.eui and th.edge or th.accent, th.eui and 1 or 0.5))
     for i, t in ipairs(tabs) do
       t.text:SetFontObject(th.headerFont)
       t.text:SetTextColor(RGB(i == current and th.title or (t.hover and th.hover or th.dim)))
@@ -438,7 +507,7 @@ function UI.Scroll(parent, width, height)
   scroll:SetScrollChild(content)
   local thumb = scroll:CreateTexture(nil, "OVERLAY")
   thumb:SetTexture(W); thumb:SetWidth(3)
-  UI.Skin(function(th) thumb:SetVertexColor(RGB(th.box, 0.9)) end)
+  UI.Skin(function(th) if th.eui then thumb:SetVertexColor(1, 1, 1, 0.5) else thumb:SetVertexColor(RGB(th.box, 0.9)) end end)
   local function update()
     local max = math.max(0, content:GetHeight() - scroll:GetHeight())
     if (scroll:GetVerticalScroll() or 0) > max then scroll:SetVerticalScroll(max) end
