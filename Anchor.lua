@@ -69,8 +69,8 @@ driver:SetScript("OnUpdate", function(_, elapsed)
       if ok and ns.Readable(exists) and not exists then watching = false; GameTooltip:Hide() end
     end
   end
-  -- a corpse or object: ask the game what's under the cursor now; once it has said something and
-  -- then says nothing, the mouse has left it (the game doesn't always fade these, see below)
+  -- a unit, corpse or object: ask the game what's under the cursor now; once it has said something
+  -- and then says nothing, the mouse has left it (the game doesn't always fade these, see below)
   if thingWatch then
     sinceThing = sinceThing + elapsed
     if sinceThing >= 0.1 then
@@ -86,12 +86,20 @@ end)
 -- a unit's tooltip (world or unit frame): a re-show with nothing new in it is a ghost (below)
 function A.MarkUnit() worldUnit = true end
 
--- a world unit's tooltip: hide it as soon as the mouse leaves the unit (instead of the game's fade)
+-- a world unit's tooltip: hide it as soon as the mouse leaves the unit (instead of the game's fade).
+-- Two checks, either one is enough: the game's "mouseover" unit gone, or nothing under the cursor
+-- at all. (A corpse can stay "mouseover" after you've moved off it, and in combat the first may
+-- not be readable; without "no fade" the second still starts the game's fade, which it can skip.)
 function A.WatchMouseover()
   worldUnit = true
-  if not ns.db.instantHide then return end
-  watching, sinceCheck = true, 0
-  driver:Show()
+  if ns.db.instantHide then
+    watching, sinceCheck = true, 0
+    driver:Show()
+  end
+  if C_TooltipInfo and C_TooltipInfo.GetWorldCursor then
+    thingWatch, seenCursor, sinceThing = true, false, 0
+    driver:Show()
+  end
 end
 
 -- a corpse's or an object's tooltip in the world: hide it when the mouse leaves (these could stay up
