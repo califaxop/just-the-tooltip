@@ -63,21 +63,22 @@ local function Ids(s)
   return t, tonumber(more) or 0
 end
 
--- an item's source lines: { { left, right }, ... } and how many more there are (cached per item)
+-- an item's source lines: { { left, right, prio, order, kind, name }, ... } and how many more of
+-- each kind there are past those named (cached per item)
 local cache = {}
 local function Lines(id)
   if cache[id] then return cache[id][1], cache[id][2] end
   local d = Data()
   local entry = d and d.items and d.items[id]
-  if not entry then cache[id] = { {}, 0 }; return cache[id][1], 0 end
+  if not entry then cache[id] = { {}, {} }; return cache[id][1], cache[id][2] end
   local mine = UnitFactionGroup and UnitFactionGroup("player")
   mine = (mine == "Alliance" and "A") or (mine == "Horde" and "H") or nil
-  local out, more, seen = {}, 0, {}
+  local out, more, seen = {}, {}, {}
   -- most useful first: quests, boss and elite drops, drops, vendors, professions, world drops, chests
-  local function add(left, right, prio) -- (two chests of the same name: one line)
+  local function add(left, right, prio, kind, name) -- (two chests of the same name: one line)
     if seen[left] then return end
     seen[left] = true
-    out[#out + 1] = { left, right or "", prio, #out }
+    out[#out + 1] = { left, right or "", prio, #out, kind, name }
   end
   local randomChests = false
   for part in (entry .. ";"):gmatch("([^;]+);") do
@@ -85,54 +86,109 @@ local function Lines(id)
     if kind == "q" then
       for _, q in ipairs((Ids(rest))) do
         local r = Split(d.quests[q])
-        if r[1] and (r[3] == "" or not mine or r[3] == mine) then add("Quest: " .. r[1], Levels(r[2]), 1) end
+        if r[1] and (r[3] == "" or not mine or r[3] == mine) then add("Quest: " .. r[1], Levels(r[2]), 1, "q", r[1]) end
       end
     elseif kind == "d" or kind == "v" then
       local ids, extra = Ids(rest)
-      more = more + extra
+      more[kind] = (more[kind] or 0) + extra
       for _, n in ipairs(ids) do
         local r = Split(d.npcs[n])
         if r[1] then
           if kind == "d" then
             local rank = RANK[tonumber(r[4]) or 0]
-            add("Drop: " .. r[1] .. (rank and (GREY .. " (" .. rank .. ")|r") or ""), Zone(r[5]), rank and 2 or 3)
+            add("Drop: " .. r[1] .. (rank and (GREY .. " (" .. rank .. ")|r") or ""), Zone(r[5]), rank and 2 or 3, "d", r[1])
           elseif not mine or (r[6] or ""):find(mine) then
-            add("Vendor: " .. r[1], Zone(r[5]), 4)
+            add("Vendor: " .. r[1], Zone(r[5]), 4, "v", r[1])
           end
         end
       end
     elseif kind == "w" then
       local a, b = rest:match("(%d+)%-(%d+)")
-      add("World drop", Levels(a, b), 6)
+      add("World drop", Levels(a, b), 6, "w")
     elseif kind == "o" then
       local ids, extra = Ids(rest)
-      more = more + extra
+      more.o = (more.o or 0) + extra
       for _, o in ipairs(ids) do
         local r = Split(d.objects[o])
         -- (an "Alliance Chest" when you're Horde: not yours to open)
         local other = (mine == "A" and "^Horde ") or (mine == "H" and "^Alliance ") or nil
-        if r[1] and not (other and r[1]:find(other)) then add("Found in: " .. r[1], Zone(r[2]), 7) end
+        if r[1] and not (other and r[1]:find(other)) then add("Found in: " .. r[1], Zone(r[2]), 7, "o", r[1]) end
       end
     elseif kind == "c" then
-      add("Crafted: " .. (d.skills[tonumber(rest)] or "a profession"), nil, 5)
+      add("Crafted: " .. (d.skills[tonumber(rest)] or "a profession"), nil, 5, "c")
     elseif kind == "r" then
       randomChests = true
     end
   end
   -- random-loot chests ("Solid Chest"): only when there's nothing better to say
-  if #out == 0 and randomChests then add("Random chests and containers", nil, 8) end
+  if #out == 0 and randomChests then add("Random chests and containers", nil, 8, "r") end
   table.sort(out, function(a, b) if a[3] ~= b[3] then return a[3] < b[3] end return a[4] < b[4] end)
-  if #out > MAX_LINES then
-    more = more + #out - MAX_LINES
-    for i = #out, MAX_LINES + 1, -1 do out[i] = nil end
-  end
   cache[id] = { out, more }
   return out, more
 end
 
+-- NeedRoll (a loot browser for Forever) puts where an item drops in its tooltip, from newer loot
+-- tables than ours: when it's there, it goes first and we only add what it doesn't say.
+local needRoll = false
+local function NeedRollLoaded()
+  if not needRoll then -- (asked each time until it is: it may load after us)
+    local loaded = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
+    for _, name in ipairs({ "NeedRoll", "Needroll", "needroll" }) do
+      local ok, on = false, nil
+      if loaded then ok, on = pcall(loaded, name) end
+      if ok and on then needRoll = true; break end
+    end
+  end
+  return needRoll
+end
+
+-- what the tooltip already says (lower case), and whether NeedRoll named a drop in it: its line is
+-- an icon, then "Boss - Instance"
+local function Already(tip)
+  local text, nr = {}, false
+  local name = tip.GetName and tip:GetName()
+  if not name then return text, nr end
+  local check = NeedRollLoaded()
+  for i = 1, tip:NumLines() do
+    for _, side in ipairs({ "TextLeft", "TextRight" }) do
+      local fs = _G[name .. side .. i]
+      local ok, t = false, nil
+      if fs and fs.GetText then ok, t = pcall(fs.GetText, fs) end
+      if ok and Readable(t) and type(t) == "string" and t ~= "" then
+        text[#text + 1] = t:lower()
+        if check and side == "TextLeft" and t:find("^|[TA]") and t:find(" %- ") then nr = true end
+      end
+    end
+  end
+  return text, nr
+end
+local function Says(text, what)
+  what = what:lower()
+  for _, t in ipairs(text) do if t:find(what, 1, true) then return true end end
+  return false
+end
+
 function S.Add(tip, id)
   if not (ns.db.sources and Readable(id) and type(id) == "number") then return end
-  local lines, more = Lines(id)
-  for _, l in ipairs(lines) do tip:AddDoubleLine(WHITE .. l[1] .. "|r", GREY .. l[2] .. "|r") end
+  local lines, extra = Lines(id)
+  if #lines == 0 then return end
+  local text, nr = Already(tip)
+  local shown, more = 0, 0
+  for k, n in pairs(extra) do
+    if not (nr and k == "d") then more = more + n end -- (NeedRoll has the drops: ours aren't missed)
+  end
+  for _, l in ipairs(lines) do
+    local kind, name = l[5], l[6]
+    if nr and (kind == "d" or kind == "w") then
+      -- NeedRoll says where it drops
+    elseif name and Says(text, name) then
+      -- already in the tooltip (another addon named this boss, quest, vendor or chest)
+    elseif shown < MAX_LINES then
+      tip:AddDoubleLine(WHITE .. l[1] .. "|r", GREY .. l[2] .. "|r")
+      shown = shown + 1
+    else
+      more = more + 1
+    end
+  end
   if more > 0 then tip:AddLine(GREY .. format("+%d more source%s", more, more == 1 and "" or "s") .. "|r") end
 end
