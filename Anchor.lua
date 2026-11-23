@@ -22,7 +22,7 @@ local owner, awayFor = nil, 0 -- a frame the tooltip belongs to (your player fra
 local ghost = false     -- a world unit's tooltip was hidden and nothing new has been put in it since
 local worldThing = false -- the tooltip shows something in the world that isn't a unit (a corpse, an object)
 local thingWatch, seenCursor, sinceThing = false, false, 0
-local lastX, lastY, sinceCheck = nil, nil, 0
+local lastX, lastY, sinceCheck, sinceUI = nil, nil, 0, 0
 local driver = CreateFrame("Frame")
 driver:Hide()
 
@@ -34,6 +34,35 @@ local function Trace(msg, once)
   ns.Print(format("|cff9d9d9d%.2fs|r %s", GetTime() - (t0 or GetTime()), msg))
 end
 A.Trace = Trace
+
+-- The frame the mouse is over, if it's part of the interface (chat, bars, unit frames...) rather
+-- than the 3D world. The game keeps the last unit under the mouse as "mouseover" while the mouse is
+-- over the interface, so a world unit's tooltip would stay up until you're back over the world.
+local function OverInterface()
+  local focus
+  if GetMouseFoci then
+    local ok, t = pcall(GetMouseFoci)
+    focus = ok and type(t) == "table" and t[1] or nil
+  elseif GetMouseFocus then
+    local ok, f = pcall(GetMouseFocus)
+    focus = ok and f or nil
+  end
+  if not focus or focus == WorldFrame or focus == UIParent then return nil end
+  -- (a nameplate is the unit itself, and the tooltip is no part of the interface we're leaving for)
+  if focus == GameTooltip then return nil end
+  -- (FlareUI's and EllesmereUI's plates are inside the game's nameplate frames: walk up to see)
+  local fr, name = focus, nil
+  for i = 1, 12 do
+    local okN, n = pcall(fr.GetName, fr)
+    n = okN and type(n) == "string" and n or nil
+    if i == 1 then name = n end
+    if n and n:find("^NamePlate") then return nil end
+    local okP, p = pcall(fr.GetParent, fr)
+    if not okP or not p or p == UIParent or p == WorldFrame then break end
+    fr = p
+  end
+  return focus, name or "a frame"
+end
 
 local function FollowCursor(force)
   local tip = GameTooltip
@@ -68,6 +97,15 @@ driver:SetScript("OnUpdate", function(_, elapsed)
       if awayFor >= (ns.db.instantHide and 0.1 or 1.5) then owner = nil; GameTooltip:Hide(); return end
     else
       awayFor = 0
+    end
+  end
+  if (watching or thingWatch) and (worldUnit or worldThing) then
+    -- the mouse went onto the interface: you're not hovering the unit any more (20 times a second)
+    sinceUI = sinceUI + elapsed
+    if sinceUI >= 0.05 then
+      sinceUI = 0
+      local over, name = OverInterface()
+      if over then Trace("mouse over the interface (" .. name .. "): " .. (ns.db.instantHide and "hiding" or "fading")); Leave(); return end
     end
   end
   if watching then
