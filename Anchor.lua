@@ -26,6 +26,15 @@ local lastX, lastY, sinceCheck = nil, nil, 0
 local driver = CreateFrame("Frame")
 driver:Hide()
 
+-- /jtt trace: what the game says and what we do, with times, while you hover and leave something
+local trace, t0, traced = false, nil, {}
+local function Trace(msg, once)
+  if not trace then return end
+  if once then if traced[once] then return end traced[once] = true end
+  ns.Print(format("|cff9d9d9d%.2fs|r %s", GetTime() - (t0 or GetTime()), msg))
+end
+A.Trace = Trace
+
 local function FollowCursor(force)
   local tip = GameTooltip
   local x, y = GetCursorPosition()
@@ -66,7 +75,8 @@ driver:SetScript("OnUpdate", function(_, elapsed)
     if sinceCheck >= 0.05 then
       sinceCheck = 0
       local ok, exists = pcall(UnitExists, "mouseover")
-      if ok and ns.Readable(exists) and not exists then watching = false; GameTooltip:Hide() end
+      if ok and ns.Readable(exists) and not exists then watching = false; Trace("no mouseover unit: hiding"); GameTooltip:Hide()
+      elseif not ok or not ns.Readable(exists) then Trace("mouseover: can't be read now", "mo") end
     end
   end
   -- a unit, corpse or object: ask the game what's under the cursor now; once it has said something
@@ -77,8 +87,12 @@ driver:SetScript("OnUpdate", function(_, elapsed)
       sinceThing = 0
       local ok, data = pcall(C_TooltipInfo.GetWorldCursor)
       if ok then
-        if data then seenCursor = true elseif seenCursor then Leave(); return end
-      end
+        if data then
+          if not seenCursor then Trace("cursor: over something") end
+          seenCursor = true
+        elseif seenCursor then Trace("cursor: over nothing: " .. (ns.db.instantHide and "hiding" or "fading")); Leave(); return
+        else Trace("cursor: says nothing yet", "cn") end
+      else Trace("cursor check failed", "cf") end
     end
   end
 end)
@@ -92,6 +106,11 @@ function A.MarkUnit() worldUnit = true end
 -- not be readable; without "no fade" the second still starts the game's fade, which it can skip.)
 function A.WatchMouseover()
   worldUnit = true
+  if trace then
+    t0, traced = GetTime(), {}
+    Trace(format("unit tooltip shown (no fade: %s, cursor check: %s)", tostring(ns.db.instantHide),
+      tostring(C_TooltipInfo and C_TooltipInfo.GetWorldCursor and true or false)))
+  end
   if ns.db.instantHide then
     watching, sinceCheck = true, 0
     driver:Show()
@@ -180,6 +199,11 @@ function A.Debug()
     tostring(following), tostring(watching), tostring(worldUnit), tostring(worldThing), tostring(ghost)))
 end
 
+function A.ToggleTrace()
+  trace = not trace
+  ns.Print(trace and "trace on: hover an enemy, move off it, then send these lines. /jtt trace again to stop." or "trace off.")
+end
+
 function A.ResetSpot()
   ns.db.spot = ns.Copy(ns.DEFAULTS.spot)
   A.PlaceSpot()
@@ -220,6 +244,7 @@ function A.Hook()
   -- also how anything new is put in the tooltip, so it ends a "ghost" (below)
   if hooksecurefunc then hooksecurefunc(GameTooltip, "SetOwner", function() Stop(); ghost = false end) end
   GameTooltip:HookScript("OnHide", function()
+    Trace("tooltip hidden")
     Stop()
     if worldUnit or worldThing then ghost = true end
     worldUnit, worldThing = false, false
@@ -227,14 +252,25 @@ function A.Hook()
   -- the game says when the cursor is over nothing in the world any more: a world tooltip
   -- (unit, corpse, object) still up then is left over
   local ev = CreateFrame("Frame")
-  if pcall(ev.RegisterEvent, ev, "WORLD_CURSOR_TOOLTIP_UPDATE") then
-    ev:SetScript("OnEvent", function(_, _, anchorType)
-      if not ns.db or not ns.Readable(anchorType) then return end
-      local none = Enum and Enum.WorldCursorAnchorType and Enum.WorldCursorAnchorType.None or 0
-      if anchorType ~= none or not (worldUnit or worldThing) then return end
-      if GameTooltip:IsShown() and InWorld(GameTooltip:GetOwner()) then Leave() end
-    end)
-  end
+  pcall(ev.RegisterEvent, ev, "UPDATE_MOUSEOVER_UNIT")
+  pcall(ev.RegisterEvent, ev, "WORLD_CURSOR_TOOLTIP_UPDATE")
+  ev:SetScript("OnEvent", function(_, event, anchorType)
+    if not ns.db then return end
+    local shownInWorld = GameTooltip:IsShown() and InWorld(GameTooltip:GetOwner())
+    if event == "UPDATE_MOUSEOVER_UNIT" then
+      -- the mouse moved off a unit (or onto another): with no unit under it now, a unit's tooltip goes
+      local ok, e = pcall(UnitExists, "mouseover")
+      local known = ok and ns.Readable(e)
+      Trace("game: mouseover changed (a unit: " .. tostring(known and e or "?") .. ")")
+      if known and not e and worldUnit and shownInWorld then Leave() end
+      return
+    end
+    Trace("game: cursor " .. tostring(ns.Readable(anchorType) and anchorType or "?") .. " (0: nothing)")
+    if not ns.Readable(anchorType) then return end
+    local none = Enum and Enum.WorldCursorAnchorType and Enum.WorldCursorAnchorType.None or 0
+    if anchorType ~= none or not (worldUnit or worldThing) then return end
+    if shownInWorld then Leave() end
+  end)
   -- A world unit's tooltip can come back after it was hidden, still showing that unit (without its
   -- health bar) and staying until you hover something else. Everything new in the tooltip comes
   -- with a new owner first, so a show with no new owner since is that ghost: hide it again.
@@ -245,6 +281,7 @@ function A.Hook()
   -- with "no fade", hide it now
   if hooksecurefunc and GameTooltip.FadeOut then
     hooksecurefunc(GameTooltip, "FadeOut", function(tip)
+      Trace("game: fade out")
       if ns.db.instantHide then tip:Hide() end
     end)
   end

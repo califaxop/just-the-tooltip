@@ -44,6 +44,8 @@ SlashCmdList.JUSTTHETOOLTIP = function(msg)
     ns.db.anchor = "custom"; ns.Anchor.Unlock(not ns.Anchor.unlocked)
   elseif cmd == "debug" then
     ns.Anchor.Debug()
+  elseif cmd == "trace" then
+    ns.Anchor.ToggleTrace()
   elseif cmd == "reset" then
     ns.db.anchor = "default"; ns.Anchor.ResetSpot(); ns.Print("tooltips are back at the game's spot.")
   else
