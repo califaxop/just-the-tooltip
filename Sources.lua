@@ -113,14 +113,9 @@ local function Icon(kind, skill)
   return icons[kind]
 end
 
--- an item's sources: { { kind, text, right, prio, order, name, zone, skill }, ... } and how many
--- more of each kind there are past those named (cached per item)
-local cache = {}
-local function Lines(id)
-  if cache[id] then return cache[id][1], cache[id][2] end
-  local d = Data()
-  local entry = d and d.items and d.items[id]
-  if not entry then cache[id] = { {}, {} }; return cache[id][1], cache[id][2] end
+-- an item's sources from `entry` (our data's format, looked up in `d`): { { kind, text, right,
+-- prio, order, name, zone, skill }, ... } and how many more of each kind there are past those named
+local function Build(d, entry)
   local mine = UnitFactionGroup and UnitFactionGroup("player")
   mine = (mine == "Alliance" and "A") or (mine == "Horde" and "H") or nil
   local instances = d.instances or {}
@@ -175,7 +170,7 @@ local function Lines(id)
       end
     elseif kind == "c" then
       local skill = tonumber(rest)
-      add("Crafted", d.skills[skill] or "A profession", nil, 5, nil, nil, skill)
+      add("Crafted", (d.skills or {})[skill] or "A profession", nil, 5, nil, nil, skill)
     elseif kind == "r" then
       randomChests = true
     end
@@ -183,6 +178,111 @@ local function Lines(id)
   -- random-loot chests ("Solid Chest"): only when there's nothing better to say
   if #out == 0 and randomChests then add("Random Chests", "Random chests and containers", nil, 8) end
   table.sort(out, function(a, b) if a.prio ~= b.prio then return a.prio < b.prio end return a.order < b.order end)
+  return out, more
+end
+
+-- Items our data doesn't have yet (new since it was built): asked of Questie, if it's installed, in
+-- the same form (its database is where ours comes from).
+local QDB
+-- Questie's database once Questie says it's ready (its API), or once its quest list exists
+local function QuestieReady()
+  local api = type(Questie) == "table" and Questie.API
+  if api and api.isReady ~= nil then return api.isReady and true or false end
+  return QDB and QDB.QuestPointers ~= nil or false
+end
+local function QuestieDB()
+  if QDB == nil then
+    if not (QuestieLoader and QuestieLoader.ImportModule) then return nil end -- (not loaded: ask later)
+    local ok, db = pcall(QuestieLoader.ImportModule, QuestieLoader, "QuestieDB")
+    QDB = ok and type(db) == "table" and db.QueryItemSingle and db or false
+  end
+  if QDB and not QuestieReady() then return nil end
+  return QDB or nil
+end
+local function Ask(fn, id, key)
+  if not fn then return nil end
+  local ok, v = pcall(fn, id, key)
+  if ok then return v end
+end
+local ALLIANCE, HORDE = 1 + 4 + 8 + 64, 2 + 16 + 32 + 128
+local function FromQuestie(id)
+  local db = QuestieDB()
+  if not db then return nil end
+  local function list(key)
+    local t = Ask(db.QueryItemSingle, id, key)
+    local out = {}
+    if type(t) == "table" then for _, v in ipairs(t) do if type(v) == "number" then out[#out + 1] = v end end end
+    return out
+  end
+  local quests, drops, vendors, objects = list("questRewards"), list("npcDrops"), list("vendors"), list("objectDrops")
+  if #quests + #drops + #vendors + #objects == 0 then return nil end
+  local band = bit and bit.band
+  local d = { quests = {}, npcs = {}, objects = {}, instances = (Data() or {}).instances }
+  local function npc(n)
+    local name = Ask(db.QueryNPCSingle, n, "name")
+    if type(name) ~= "string" then return false end
+    d.npcs[n] = table.concat({ name, Ask(db.QueryNPCSingle, n, "minLevel") or 0, Ask(db.QueryNPCSingle, n, "maxLevel") or 0,
+      Ask(db.QueryNPCSingle, n, "rank") or 0, Ask(db.QueryNPCSingle, n, "zoneID") or 0,
+      Ask(db.QueryNPCSingle, n, "friendlyToFaction") or "" }, "|")
+    return true
+  end
+  local parts = {}
+  local function ids(prefix, t, max)
+    local keep = {}
+    for i = 1, math.min(#t, max) do keep[#keep + 1] = t[i] end
+    parts[#parts + 1] = prefix .. table.concat(keep, ",") .. (#t > max and ("+" .. (#t - max)) or "")
+  end
+  local q = {}
+  for _, id2 in ipairs(quests) do
+    local name = Ask(db.QueryQuestSingle, id2, "name")
+    if type(name) == "string" then
+      local races = tonumber(Ask(db.QueryQuestSingle, id2, "requiredRaces")) or 0
+      local fac = ""
+      if band and races ~= 0 and not (band(races, ALLIANCE) ~= 0 and band(races, HORDE) ~= 0) then
+        fac = band(races, ALLIANCE) ~= 0 and "A" or "H"
+      end
+      d.quests[id2] = table.concat({ name, Ask(db.QueryQuestSingle, id2, "questLevel") or 0, fac }, "|")
+      q[#q + 1] = id2
+    end
+  end
+  if #q > 0 then ids("q", q, 6) end
+  local dr = {}
+  for _, n in ipairs(drops) do if npc(n) then dr[#dr + 1] = n end end
+  if #dr > 12 then -- (dropped by many creatures: a world drop)
+    local lo, hi = nil, 0
+    for _, n in ipairs(dr) do
+      local r = Split(d.npcs[n]); local a, b = tonumber(r[2]) or 0, tonumber(r[3]) or 0
+      if a > 0 then lo = math.min(lo or a, a) end; hi = math.max(hi, b)
+    end
+    parts[#parts + 1] = format("w%d-%d", lo or 0, hi)
+  elseif #dr > 0 then ids("d", dr, 6) end
+  local ve = {}
+  for _, n in ipairs(vendors) do if npc(n) then ve[#ve + 1] = n end end
+  if #ve > 0 then ids("v", ve, 6) end
+  local ob = {}
+  for _, o in ipairs(objects) do
+    local name = Ask(db.QueryObjectSingle, o, "name")
+    if type(name) == "string" then d.objects[o] = name .. "|" .. (Ask(db.QueryObjectSingle, o, "zoneID") or 0); ob[#ob + 1] = o end
+  end
+  if #ob > 0 then ids("o", ob, 6) end
+  if #parts == 0 then return nil end
+  return d, table.concat(parts, ";")
+end
+
+local cache = {}
+local function Lines(id)
+  if cache[id] then return cache[id][1], cache[id][2] end
+  local d = Data()
+  local entry = d and d.items and d.items[id]
+  if not entry then
+    local qd, qentry = FromQuestie(id)
+    if not qd then
+      if QDB == nil or (QDB and not QuestieReady()) then return {}, {} end -- (Questie not ready yet: ask again next time)
+      cache[id] = { {}, {} }; return cache[id][1], cache[id][2]
+    end
+    d, entry = qd, qentry
+  end
+  local out, more = Build(d, entry)
   cache[id] = { out, more }
   return out, more
 end
@@ -203,6 +303,83 @@ local function NeedRollLoaded()
     end
   end
   return needRoll
+end
+
+-- With NeedRoll installed, Just the Tooltip! draws the sources: NeedRoll's lines are held off the
+-- tooltips we draw on (its "tooltip lines" setting, off only while the game builds an item
+-- tooltip for us, then back as it was: the saved setting never changes, and its quest tooltip
+-- notes stay), and what NeedRoll knows is read from a hidden tooltip and shown our way. Its
+-- dungeon and raid loot is newer than ours: where it names a dungeon, its drops there replace ours.
+local held, heldValue = false, nil
+local function CanHold() return NeedRollLoaded() and type(NeedRollDB) == "table" end
+local scanTip
+function S.Hold(tip) -- before NeedRoll sees an item tooltip of ours
+  if not (ns.db and ns.db.sources and tip ~= scanTip and ns.IsOurs(tip) and CanHold()) then return end
+  if not held then
+    held, heldValue = true, NeedRollDB.tooltipSources
+    if C_Timer and C_Timer.After then C_Timer.After(0, S.Release) end -- (back next frame whatever happens)
+  end
+  NeedRollDB.tooltipSources = false
+end
+function S.Release() -- after it has (and on logout, to be safe)
+  if held and type(NeedRollDB) == "table" then NeedRollDB.tooltipSources = heldValue end
+  held = false
+end
+S.Holding = function() return S.canHold and CanHold() end
+
+local nrCache = {}
+local raidNames
+local function IsRaid(where)
+  if not raidNames then
+    raidNames = { ["molten core"] = true, ["onyxia's lair"] = true, ["blackwing lair"] = true, ["zul'gurub"] = true,
+      ["ruins of ahn'qiraj"] = true, ["temple of ahn'qiraj"] = true, ["naxxramas"] = true }
+    local d = Data()
+    for z, t in pairs(d and d.instances or {}) do
+      if t == 2 then local n = Zone(z); if n ~= "" then raidNames[n:lower()] = true end end
+    end
+  end
+  return raidNames[where:lower()] or false
+end
+-- NeedRoll's sources for item `id`, our way: { lines, more }
+local function FromNeedRoll(id)
+  if nrCache[id] then return nrCache[id] end
+  local res = { lines = {}, more = 0 }
+  if not scanTip then
+    scanTip = CreateFrame("GameTooltip", "JustTheTooltipNeedRollScan", nil, "GameTooltipTemplate")
+  end
+  S.Release()
+  local before = NeedRollDB.tooltipSources
+  NeedRollDB.tooltipSources = nil -- (on, for this hidden tooltip only)
+  scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
+  local ok = pcall(scanTip.SetItemByID, scanTip, id)
+  NeedRollDB.tooltipSources = before
+  if ok then
+    for i = 2, scanTip:NumLines() do
+      local fs = _G["JustTheTooltipNeedRollScanTextLeft" .. i]
+      local okT, t = false, nil
+      if fs then okT, t = pcall(fs.GetText, fs) end
+      if okT and Readable(t) and type(t) == "string" then
+        if t:find("^|[TA]") and t:find(" %- ") then
+          local quest = t:find("Crosshair_Quest", 1, true) ~= nil
+          local plain = t:gsub("^|T.-|t%s*", ""):gsub("^|A.-|a%s*", ""):gsub("%s*|A.-|a%s*$", ""):gsub("%s*|T.-|t%s*$", "")
+          local who, where = plain:match("^(.*) %- (.-)$")
+          if who and where then
+            local l = quest and { kind = "Quest", text = who, right = where, prio = 1, name = who, zone = where }
+              or { kind = IsRaid(where) and "Raid" or "Dungeon", text = who .. " - " .. where, right = "", prio = 2,
+                name = who ~= "Trash" and who or nil, zone = where }
+            l.order, l.nr = #res.lines, true
+            res.lines[#res.lines + 1] = l
+          end
+        else
+          local n = t:match("^%+(%d+)") -- ("+2 more")
+          if n then res.more = res.more + tonumber(n) end
+        end
+      end
+    end
+  end
+  scanTip:Hide()
+  nrCache[id] = res
+  return res
 end
 
 -- what the tooltip already says (lower case), and NeedRoll's lines in it (an icon, then
@@ -234,6 +411,38 @@ end
 function S.Add(tip, id)
   if not (ns.db.sources and Readable(id) and type(id) == "number") then return end
   local lines, extra = Lines(id)
+  local nrRes = S.canHold and CanHold() and FromNeedRoll(id) or nil
+  if nrRes and #nrRes.lines > 0 then
+    -- NeedRoll's dungeons replace our drops there; its quests join ours (one line per quest)
+    local covered, quests, merged, coveredAny = {}, {}, {}, false
+    for _, l in ipairs(nrRes.lines) do
+      if l.kind ~= "Quest" then covered[#covered + 1] = l.zone:lower(); coveredAny = true end
+    end
+    local function inCovered(zone)
+      zone = zone:lower()
+      for _, c in ipairs(covered) do if c:find(zone, 1, true) or zone:find(c, 1, true) then return true end end
+      return false
+    end
+    for _, l in ipairs(lines) do
+      local isDrop = l.kind == "Dungeon" or l.kind == "Raid" or l.kind == "Boss" or l.kind == "Enemy"
+      if not (isDrop and coveredAny and (l.zone == "" or inCovered(l.zone))) then
+        merged[#merged + 1] = l
+        if l.kind == "Quest" then quests[l.name:lower()] = true end
+      end
+    end
+    for _, l in ipairs(nrRes.lines) do
+      if not (l.kind == "Quest" and quests[l.name:lower()]) then merged[#merged + 1] = l end
+    end
+    table.sort(merged, function(a, b)
+      if a.prio ~= b.prio then return a.prio < b.prio end
+      if (a.nr or false) ~= (b.nr or false) then return b.nr or false end
+      return a.order < b.order
+    end)
+    local e = {}
+    for k, n in pairs(extra) do if not (coveredAny and k == "d") then e[k] = n end end
+    e.nr = nrRes.more
+    lines, extra = merged, e
+  end
   if #lines == 0 then return end
   local text, nr = Already(tip)
   -- NeedRoll's drop lines (its quest lines have the quest marker)

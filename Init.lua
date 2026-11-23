@@ -4,10 +4,13 @@ local _, ns = ...
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("ADDON_LOADED")
 ev:RegisterEvent("PLAYER_LOGIN")
+ev:RegisterEvent("PLAYER_LOGOUT")
 ev:SetScript("OnEvent", function(_, event, arg1)
   if event == "ADDON_LOADED" and arg1 == ns.name then
     ns.LoadDB()
     ns.CreateOptions()
+  elseif event == "PLAYER_LOGOUT" then
+    ns.Sources.Release() -- (NeedRoll's setting back as it was before it's saved)
   elseif event == "PLAYER_LOGIN" then
     ns.Anchor.Hook()
     ns.Look.Hook()
