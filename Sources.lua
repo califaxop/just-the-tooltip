@@ -305,6 +305,53 @@ local function NeedRollLoaded()
   return needRoll
 end
 
+-- Whether you've collected an item's look (from it or another with the same appearance): true or
+-- false, nil for items with no look (rings) or no collection in this client. Cached until the
+-- collection changes. Shown as a tick on the Source: line, as NeedRoll does.
+local collected, NO_LOOK = {}, {}
+local function Collected(id)
+  local known = collected[id]
+  if known == NO_LOOK then return nil end
+  if known ~= nil then return known end
+  local tc = C_TransmogCollection
+  if not (tc and tc.GetItemInfo) then return nil end
+  local ok, _, sourceID = pcall(tc.GetItemInfo, id)
+  if not ok or not Readable(sourceID) or not sourceID then
+    if ok then collected[id] = NO_LOOK end -- (asked again only if the call failed)
+    return nil
+  end
+  local okI, info = pcall(tc.GetAppearanceInfoBySource, sourceID)
+  known = (okI and type(info) == "table" and (info.appearanceIsCollected or info.sourceIsCollected)) and true or false
+  if not known and tc.PlayerHasTransmog then
+    local okH, has = pcall(tc.PlayerHasTransmog, id)
+    known = okH and Readable(has) and has and true or false
+  end
+  collected[id] = known
+  return known
+end
+do
+  local f = CreateFrame("Frame")
+  for _, e in ipairs({ "TRANSMOG_COLLECTION_UPDATED", "TRANSMOG_COLLECTION_SOURCE_ADDED", "TRANSMOG_COLLECTION_SOURCE_REMOVED" }) do
+    pcall(f.RegisterEvent, f, e)
+  end
+  f:SetScript("OnEvent", function() wipe(collected) end)
+end
+local TICK = "common-icon-checkmark"
+local tickMarkup = {}
+local function Tick(known)
+  if known == nil or not ns.db.collectedTick then return "" end
+  if tickMarkup[known] == nil then
+    if HasAtlas(TICK) then
+      tickMarkup[known] = known and format(" |A:%s:%d:%d|a", TICK, ICON, ICON)
+        or format(" |A:%s:%d:%d:0:0:140:140:140|a", TICK, ICON, ICON) -- (greyed: not collected yet)
+    else
+      tickMarkup[known] = known and format(" |TInterface\\RaidFrame\\ReadyCheck-Ready:%d:%d|t", ICON, ICON)
+        or format(" |TInterface\\RaidFrame\\ReadyCheck-Ready:%d:%d:0:0:64:64:0:64:0:64:140:140:140|t", ICON, ICON)
+    end
+  end
+  return tickMarkup[known]
+end
+
 -- With NeedRoll installed, Just the Tooltip! draws the sources: NeedRoll's lines are held off the
 -- tooltips we draw on (its "tooltip lines" setting, off only while the game builds an item
 -- tooltip for us, then back as it was: the saved setting never changes, and its quest tooltip
@@ -470,7 +517,7 @@ function S.Add(tip, id)
   -- just one: on the heading line ("Source: [chest] Random chests and containers")
   if #show == 1 and more == 0 then
     local l = show[1]
-    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r", GREY .. l.right .. "|r")
+    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. Tick(Collected(id)), GREY .. l.right .. "|r")
     return
   end
   -- "Source: Dungeon, Quest", then a line for each
@@ -478,7 +525,7 @@ function S.Add(tip, id)
   for _, l in ipairs(show) do
     if not named[l.kind] then named[l.kind] = true; kinds[#kinds + 1] = l.kind end
   end
-  tip:AddLine(GOLD .. "Source:|r " .. WHITE .. (#kinds > 0 and table.concat(kinds, ", ") or "More") .. "|r")
+  tip:AddLine(GOLD .. "Source:|r " .. WHITE .. (#kinds > 0 and table.concat(kinds, ", ") or "More") .. "|r" .. Tick(Collected(id)))
   for _, l in ipairs(show) do
     tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r", GREY .. l.right .. "|r")
   end

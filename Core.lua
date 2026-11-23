@@ -20,6 +20,7 @@ ns.DEFAULTS = {
   scale = 1,
   ids = true,             -- Item ID / Spell ID
   itemLevel = true,
+  collectedTick = true,   -- on the Source: line, a tick: green once the item's look is in your collection, grey until then
   sources = true,         -- where gear comes from (needs the Just the Tooltip!: Sources addon, which ships with it)
   target = true,          -- "Target: Name" on units
   healthBar = true,       -- the health bar under unit tooltips

@@ -76,15 +76,16 @@ local function BuildPanel(panel)
     GameTooltip:Show()
   end)
   src:HookScript("OnLeave", function() GameTooltip:Hide() end)
-  track(at(UI.Check(panel, "Who a unit is targeting (\">> You <<\" when it's you)", S("target"), W_), 26, -492))
-  track(at(UI.Check(panel, "Health bar under unit tooltips", S("healthBar"), W_, function() ns.Info.ApplyHealthBar() end), 26, -516))
-  track(at(UI.Check(panel, "Hide right away when you stop hovering something (no fade)", S("instantHide"), W_), 26, -540))
-  track(at(UI.Check(panel, "In combat, hide tooltips for things in the world (hold Shift to see)", S("combatHide"), W_), 26, -564))
-  local n = at(UI.Text(panel, "note", "Lines from your other addons (Equip This!, Questie, What's Training...) still show: Just the Tooltip! changes the game's tooltip rather than replacing it."), 26, -592)
+  track(at(UI.Check(panel, "A tick when you've collected the item's look (grey: not yet)", S("collectedTick"), W_ - 22), 48, -492))
+  track(at(UI.Check(panel, "Who a unit is targeting (\">> You <<\" when it's you)", S("target"), W_), 26, -516))
+  track(at(UI.Check(panel, "Health bar under unit tooltips", S("healthBar"), W_, function() ns.Info.ApplyHealthBar() end), 26, -540))
+  track(at(UI.Check(panel, "Hide right away when you stop hovering something (no fade)", S("instantHide"), W_), 26, -564))
+  track(at(UI.Check(panel, "In combat, hide tooltips for things in the world (hold Shift to see)", S("combatHide"), W_), 26, -588))
+  local n = at(UI.Text(panel, "note", "Lines from your other addons (Equip This!, Questie, What's Training...) still show: Just the Tooltip! changes the game's tooltip rather than replacing it."), 26, -616)
   n:SetWidth(W_)
 
   -- hover to see where tooltips go now
-  local preview = at(UI.Button(panel, "Hover to preview", 150, function() end), 26, -638)
+  local preview = at(UI.Button(panel, "Hover to preview", 150, function() end), 26, -662)
   preview:HookScript("OnEnter", function(self)
     GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
     GameTooltip:SetText("Just the Tooltip!")
@@ -100,7 +101,7 @@ local function BuildPanel(panel)
   panel:HookScript("OnShow", function() for _, w in ipairs(refreshers) do w.Refresh() end; showRows() end)
   panel:HookScript("OnHide", function() if ns.Anchor.unlocked then ns.Anchor.Unlock(false) end end)
   showRows()
-  panel.height = 684
+  panel.height = 708
 end
 
 function ns.CreateOptions()
