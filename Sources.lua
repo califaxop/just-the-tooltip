@@ -122,9 +122,11 @@ local function Build(d, entry)
   local out, more, seen = {}, {}, {}
   -- most useful first: quests, dungeon and boss drops, drops, vendors, professions, world drops, chests
   local function add(kind, text, right, prio, name, zone, skill) -- (two chests of the same name: one line)
-    if seen[kind .. text] then return end
+    if seen[kind .. text] then return {} end
     seen[kind .. text] = true
-    out[#out + 1] = { kind = kind, text = text, right = right or "", prio = prio, order = #out, name = name, zone = zone or "", skill = skill }
+    local l = { kind = kind, text = text, right = right or "", prio = prio, order = #out, name = name, zone = zone or "", skill = skill }
+    out[#out + 1] = l
+    return l
   end
   local randomChests = false
   for part in (entry .. ";"):gmatch("([^;]+);") do
@@ -132,7 +134,7 @@ local function Build(d, entry)
     if kind == "q" then
       for _, q in ipairs((Ids(rest))) do
         local r = Split(d.quests[q])
-        if r[1] and (r[3] == "" or not mine or r[3] == mine) then add("Quest", r[1], Levels(r[2]), 1, r[1]) end
+        if r[1] and (r[3] == "" or not mine or r[3] == mine) then add("Quest", r[1], Levels(r[2]), 1, r[1]).qid = q end
       end
     elseif kind == "d" or kind == "v" then
       local ids, extra = Ids(rest)
@@ -336,6 +338,28 @@ do
   end
   f:SetScript("OnEvent", function() wipe(collected) end)
 end
+-- Whether you've done quest `qid`: true or false, nil if unknown (no ID, or no such call).
+local function QuestDone(qid)
+  if not qid then return nil end
+  local f = (C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted) or IsQuestFlaggedCompleted
+  if not f then return nil end
+  local ok, done = pcall(f, qid)
+  if ok and Readable(done) then return done and true or false end
+end
+-- a quest's ID from its name (for NeedRoll's quest lines, which name the quest only)
+local questIDs
+local function QuestID(name)
+  if not questIDs then
+    questIDs = {}
+    local d = Data()
+    for qid, v in pairs(d and d.quests or {}) do
+      local n = type(v) == "string" and v:match("^([^|]*)")
+      if n and n ~= "" and not questIDs[n:lower()] then questIDs[n:lower()] = qid end
+    end
+  end
+  return name and questIDs[name:lower()]
+end
+
 local TICK = "common-icon-checkmark"
 local tickMarkup = {}
 local function Tick(known)
@@ -411,7 +435,7 @@ local function FromNeedRoll(id)
           local plain = t:gsub("^|T.-|t%s*", ""):gsub("^|A.-|a%s*", ""):gsub("%s*|A.-|a%s*$", ""):gsub("%s*|T.-|t%s*$", "")
           local who, where = plain:match("^(.*) %- (.-)$")
           if who and where then
-            local l = quest and { kind = "Quest", text = who, right = where, prio = 1, name = who, zone = where }
+            local l = quest and { kind = "Quest", text = who, right = where, prio = 1, name = who, zone = where, qid = QuestID(who) }
               or { kind = IsRaid(where) and "Raid" or "Dungeon", text = who .. " - " .. where, right = "", prio = 2,
                 name = who ~= "Trash" and who or nil, zone = where }
             l.order, l.nr = #res.lines, true
@@ -458,6 +482,12 @@ local function Says(text, what)
   what = what:lower()
   for _, t in ipairs(text) do if t:find(what, 1, true) then return true end end
   return false
+end
+
+-- a line's tick: a quest's, once you've done it (grey: not yet); otherwise the item's look, once collected
+local function LineTick(l, id)
+  if l.kind == "Quest" then return Tick(QuestDone(l.qid)) end
+  return Tick(Collected(id))
 end
 
 function S.Add(tip, id)
@@ -524,7 +554,7 @@ function S.Add(tip, id)
   -- just one: on the heading line ("Source: [chest] Random chests and containers")
   if #show == 1 and more == 0 then
     local l = show[1]
-    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. Tick(Collected(id)), GREY .. l.right .. "|r")
+    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. LineTick(l, id), GREY .. l.right .. "|r")
     return
   end
   -- "Source: Dungeon, Quest", then a line for each
@@ -532,9 +562,12 @@ function S.Add(tip, id)
   for _, l in ipairs(show) do
     if not named[l.kind] then named[l.kind] = true; kinds[#kinds + 1] = l.kind end
   end
-  tip:AddLine(GOLD .. "Source:|r " .. WHITE .. (#kinds > 0 and table.concat(kinds, ", ") or "More") .. "|r" .. Tick(Collected(id)))
+  -- (the look's tick on the heading, unless every line is a quest: those have their own)
+  local allQuests = #show > 0
+  for _, l in ipairs(show) do if l.kind ~= "Quest" then allQuests = false end end
+  tip:AddLine(GOLD .. "Source:|r " .. WHITE .. (#kinds > 0 and table.concat(kinds, ", ") or "More") .. "|r" .. (allQuests and "" or Tick(Collected(id))))
   for _, l in ipairs(show) do
-    tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r", GREY .. l.right .. "|r")
+    tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. (l.kind == "Quest" and Tick(QuestDone(l.qid)) or ""), GREY .. l.right .. "|r")
   end
   if more > 0 then tip:AddLine("  " .. GREY .. format("+%d more source%s", more, more == 1 and "" or "s") .. "|r") end
 end
