@@ -352,32 +352,26 @@ local function Tick(known)
   return tickMarkup[known]
 end
 
--- With NeedRoll installed, Just the Tooltip! draws the sources: NeedRoll's lines are held off the
--- tooltips we draw on (its "tooltip lines" setting, off only while the game builds an item
--- tooltip for us, then back as it was: the saved setting never changes, and its quest tooltip
--- notes stay), and what NeedRoll knows is read from a hidden tooltip and shown our way. Its
--- dungeon and raid loot is newer than ours: where it names a dungeon, its drops there replace ours.
+-- With NeedRoll installed, Just the Tooltip! draws all the sources: NeedRoll's own tooltip lines are
+-- off for the session (its "tooltip lines" setting, put back as it was on logout or when our
+-- sources are turned off, so its saved setting doesn't change), and what NeedRoll knows is read
+-- from a hidden tooltip and shown our way. Its dungeon and raid loot is newer than ours: where it
+-- names a dungeon, its drops there replace ours.
 local held, heldValue = false, nil
 local function CanHold() return NeedRollLoaded() and type(NeedRollDB) == "table" end
 local scanTip
-function S.Hold(tip) -- before NeedRoll sees an item tooltip of ours
-  if not (ns.db and ns.db.sources and tip ~= scanTip and ns.IsOurs(tip) and CanHold()) then return end
-  if not held then
-    held, heldValue = true, NeedRollDB.tooltipSources
-    if C_Timer and C_Timer.After then C_Timer.After(0, S.Release) end -- (back next frame whatever happens)
+function S.Hold() -- at login, and when our sources are turned on or off
+  if ns.db and ns.db.sources and CanHold() then
+    if not held then held, heldValue = true, NeedRollDB.tooltipSources end
+    NeedRollDB.tooltipSources = false
+  else
+    S.Release()
   end
-  NeedRollDB.tooltipSources = false
 end
-function S.Release() -- after it has (and on logout, to be safe)
-  if held and type(NeedRollDB) == "table" then NeedRollDB.tooltipSources = heldValue end
+function S.Release() -- logout (before NeedRoll's setting is saved), and our sources turned off
+  -- (still off as we left it: back as it was; turned on in NeedRoll's own settings since: kept)
+  if held and type(NeedRollDB) == "table" and NeedRollDB.tooltipSources == false then NeedRollDB.tooltipSources = heldValue end
   held = false
-end
--- Our first look at an item tooltip: registered as we load, before NeedRoll does (it loads after
--- us), so it runs before NeedRoll's and holds its lines off. (Also a pre-call where the game has
--- them: Info.lua.)
-if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Item then
-  TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tip) if ns.db then S.Hold(tip) end end)
-  S.canHold = true
 end
 
 local nrCache = {}
@@ -400,7 +394,6 @@ local function FromNeedRoll(id)
   if not scanTip then
     scanTip = CreateFrame("GameTooltip", "JustTheTooltipNeedRollScan", nil, "GameTooltipTemplate")
   end
-  S.Release()
   local before = NeedRollDB.tooltipSources
   NeedRollDB.tooltipSources = nil -- (on, for this hidden tooltip only)
   scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
@@ -471,9 +464,9 @@ function S.Add(tip, id)
   if not (ns.db.sources and Readable(id) and type(id) == "number") then return end
   local lines, extra = Lines(id)
   local text, nr = Already(tip)
-  -- NeedRoll's lines held off this tooltip: show what it knows our way. (They're there after all:
-  -- leave them, and add only what they don't say, below.)
-  local nrRes = S.canHold and CanHold() and #nr == 0 and FromNeedRoll(id) or nil
+  -- NeedRoll's lines off: show what it knows our way. (Turned back on in its own settings, so they're
+  -- in the tooltip: leave them, and add only what they don't say, below.)
+  local nrRes = held and CanHold() and #nr == 0 and FromNeedRoll(id) or nil
   if nrRes and #nrRes.lines > 0 then
     -- NeedRoll's dungeons replace our drops there; its quests join ours (one line per quest)
     local covered, quests, merged, coveredAny = {}, {}, {}, false

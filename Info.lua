@@ -142,11 +142,7 @@ function I.Hook()
       if ns.db and ns.IsOurs(tip) then fn(tip, data) end
     end)
   end
-  on(T.Item, function(tip, data) ns.Sources.Release(); I.OnItem(tip, data) end)
-  -- NeedRoll: its lines held off our item tooltips while they're built (Sources.lua)
-  if TooltipDataProcessor.AddTooltipPreCall and T.Item then
-    TooltipDataProcessor.AddTooltipPreCall(T.Item, function(tip) if ns.db then ns.Sources.Hold(tip) end end)
-  end
+  on(T.Item, I.OnItem)
   on(T.Spell, I.OnSpell)
   on(T.UnitAura, I.OnSpell)   -- buffs and debuffs: their spell ID
   on(T.Unit, I.OnUnit)
