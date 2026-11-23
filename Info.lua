@@ -120,6 +120,12 @@ function I.OnUnit(tip, data)
   ns.Look.OnUnit(tip, unit)
 end
 
+-- a corpse or an object in the world: watch for the mouse leaving it too
+function I.OnWorldThing(tip)
+  if tip ~= GameTooltip then return end
+  if ns.Anchor.InWorld(tip:GetOwner()) then ns.Anchor.WatchWorldThing() end
+end
+
 -- the health bar under unit tooltips can be turned off
 function I.ApplyHealthBar()
   local bar = GameTooltipStatusBar
@@ -140,6 +146,8 @@ function I.Hook()
   on(T.Spell, I.OnSpell)
   on(T.UnitAura, I.OnSpell)   -- buffs and debuffs: their spell ID
   on(T.Unit, I.OnUnit)
+  on(T.Corpse, I.OnWorldThing)
+  on(T.Object, I.OnWorldThing)
   if GameTooltipStatusBar then
     -- the game shows the bar for every unit: keep it hidden when it's turned off
     GameTooltipStatusBar:HookScript("OnShow", function(bar) if not ns.db.healthBar then bar:Hide() end end)

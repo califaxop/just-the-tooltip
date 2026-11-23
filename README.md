@@ -39,6 +39,7 @@ New versions come out every **Wednesday at 12:00 UTC** (8 PM Philippine time, 8 
 Found a bug or have an idea? [Open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose): there's a short form for each. The settings window has a "Report a bug / suggest" button with this link too.
 
 ## Recent changes
+- **1.3.1:** Fixed: a corpse's or object's tooltip in the world could stay up after you moved off it, until you hovered something else.
 - **1.3.0:** EllesmereUI style when EllesmereUI is installed: the JTT-style tooltip becomes its flat dark panel with a thin border (quality and class colours kept), and the settings window is painted by EllesmereUI's own skinning API (your theme, accent colour and font).
 - **1.2.0:** Where gear comes from on item tooltips: quest rewards, drops, vendors, chests and professions (Show, on by default). Comes with the companion addon "Just the Tooltip!: Sources", which loads only when you hover gear.
 - **1.1.0:** NPC borders by how they feel about you: red hostile, yellow neutral, green friendly, grey when someone else tagged it (Look, on by default). The health bar under unit tooltips can be turned off (Show). Fixed a tooltip sometimes staying on screen after you moved off a unit or your player frame (until you hovered something else). Loads after other tooltip addons so its placement wins, and says if one is also loaded. JTT style and the settings use the game's tooltip border in bronze. New `/jtt debug` shows what the tooltip is doing, for bug reports.
