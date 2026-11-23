@@ -176,11 +176,16 @@ function S.Add(tip, id)
   local lines, extra = Lines(id)
   if #lines == 0 then return end
   local text, nr = Already(tip)
+  -- NeedRoll's drop lines (its quest lines have the quest marker)
+  local nrDropLines = {}
+  for _, t in ipairs(nr) do if not t:find("crosshair_quest", 1, true) then nrDropLines[#nrDropLines + 1] = t end end
   local shown, more, nrDrops = 0, 0, false
   for _, l in ipairs(lines) do
     local kind, name, zone = l[5], l[6], l[2]
-    if kind == "d" and zone ~= "" and #nr > 0 and Says(nr, zone) then
-      nrDrops = true -- NeedRoll lists this dungeon's drops (and is more up to date)
+    if kind == "d" and #nrDropLines > 0 and (zone == "" or Says(nrDropLines, zone)) then
+      -- NeedRoll lists this dungeon's drops (and is more up to date). Ours with no zone are
+      -- dungeon creatures too (our data gives the ones in the open world a zone).
+      nrDrops = true
     elseif name and Says(text, name) then
       -- already in the tooltip (another addon named this boss, quest, vendor or chest)
     elseif shown < MAX_LINES then
