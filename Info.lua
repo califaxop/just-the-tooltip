@@ -75,11 +75,15 @@ local function UnitOf(tip)
   if not tip.GetUnit then return nil end
   local ok, _, unit = pcall(tip.GetUnit, tip)
   if ok and Readable(unit) and type(unit) == "string" then return unit end
-  if UnitExists and UnitExists("mouseover") then return "mouseover" end
+  -- (the game can keep who's under the mouse secret: then there's no unit to name)
+  local okE, exists = false, nil
+  if UnitExists then okE, exists = pcall(UnitExists, "mouseover") end
+  if okE and Readable(exists) and exists then return "mouseover" end
 end
 
 local function NameColor(unit)
-  if UnitIsPlayer(unit) then
+  local okP, isPlayer = pcall(UnitIsPlayer, unit)
+  if okP and Readable(isPlayer) and isPlayer then
     local _, class = UnitClass(unit)
     local c = Readable(class) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
     if c then return format("|cff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255) end
@@ -96,7 +100,8 @@ end
 local function AddTarget(tip, unit)
   if not ns.db.target then return end
   local t = unit .. "target"
-  if not UnitExists(t) then return end
+  local okE, exists = pcall(UnitExists, t)
+  if not (okE and Readable(exists) and exists) then return end
   local isMe = UnitIsUnit(t, "player")
   if not Readable(isMe) then return end
   if isMe then tip:AddLine("Target: |cffff4040>> You <<|r"); return end
@@ -112,10 +117,12 @@ function I.OnUnit(tip, data)
     local owner = tip:GetOwner()
     if owner == UIParent or owner == WorldFrame or owner == nil then tip:Hide(); return end
   end
+  -- a unit in the world (whatever token the game used for it): watch for the mouse leaving it. First,
+  -- before anything that needs to know who it is: the game may keep that secret, and the tooltip
+  -- must still go when you move off.
+  if ns.Anchor.InWorld(tip:GetOwner()) then ns.Anchor.WatchMouseover() else ns.Anchor.MarkUnit() end
   local unit = UnitOf(tip)
   if not unit then return end
-  -- a unit in the world (whatever token the game used for it): watch for the mouse leaving it
-  if ns.Anchor.InWorld(tip:GetOwner()) then ns.Anchor.WatchMouseover() else ns.Anchor.MarkUnit() end
   AddTarget(tip, unit)
   ns.Look.OnUnit(tip, unit)
 end
