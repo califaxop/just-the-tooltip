@@ -1,7 +1,7 @@
 # Releases the addon to CurseForge whenever a push to main changes the toc's "## Version:".
 # The upload notes are that version's line under "Recent changes" in README.md.
 # After a successful upload, the version is tagged (v1.2.3); a tagged version is never uploaded again.
-# Then only main and the previous release keep a branch (release-x.y.z), to compare versions.
+# Then only this release's and the previous release's branches (release-x.y.z) are kept, to compare versions.
 # Needs the repository secret PJ_API_KEY (a CurseForge API token).
 # "Run workflow" on the Actions tab releases the current version by hand (unless it's already tagged).
 name: Release
@@ -107,20 +107,16 @@ jobs:
           git tag -a "v$VERSION" -F .release/notes.txt
           git push origin "v$VERSION"
 
-      # Hygiene: keep main plus the release before it (e.g. main at 1.6.0 and release-1.5.0) to
-      # compare against; that branch is re-created from its tag if it's gone. Other release-x.y.z
-      # branches already in main are deleted (a release branch not in main is left alone). Runs on
-      # every release run (also "Run workflow" by hand), so any left over are cleared too.
-      - name: Keep only the previous release branch
+      # Hygiene: keep the branches of this release and the one before it (e.g. release-1.6.0 and
+      # release-1.5.0), to compare versions; older release-x.y.z branches already in main are
+      # deleted (a release branch not in main is left alone). Runs on every release run (also
+      # "Run workflow" by hand), so any left over are cleared too. (A deleted branch can't be made
+      # again from here: GitHub doesn't let a workflow create one on an older commit.)
+      - name: Keep only the last two release branches
         run: |
           PREV=$( (git tag -l 'v*' | sed 's/^v//'; echo "$VERSION") | sort -uV | grep -B1 -xF "$VERSION" | head -n1)
-          [ "$PREV" = "$VERSION" ] && PREV=""
-          if [ -n "$PREV" ] && ! git rev-parse -q --verify "refs/remotes/origin/release-$PREV" >/dev/null; then
-            git push origin "v$PREV^{commit}:refs/heads/release-$PREV" && echo "made release-$PREV (from v$PREV)" \
-              || echo "::warning::could not make release-$PREV"
-          fi
           for b in $(git for-each-ref --format='%(refname:strip=3)' 'refs/remotes/origin/release-*'); do
-            [ "$b" = "release-$PREV" ] && continue
+            [ "$b" = "release-$VERSION" ] || [ "$b" = "release-$PREV" ] && continue
             if git merge-base --is-ancestor "origin/$b" HEAD; then
               git push origin --delete "$b" && echo "deleted $b" || echo "::warning::could not delete $b"
             fi
