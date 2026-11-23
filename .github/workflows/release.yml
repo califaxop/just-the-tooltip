@@ -1,6 +1,7 @@
 # Releases the addon to CurseForge whenever a push to main changes the toc's "## Version:".
 # The upload notes are that version's line under "Recent changes" in README.md.
 # After a successful upload, the version is tagged (v1.2.3); a tagged version is never uploaded again.
+# Release branches (release-x.y.z) already merged into main are then deleted.
 # Needs the repository secret PJ_API_KEY (a CurseForge API token).
 # "Run workflow" on the Actions tab releases the current version by hand (unless it's already tagged).
 name: Release
@@ -105,3 +106,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "v$VERSION" -F .release/notes.txt
           git push origin "v$VERSION"
+
+      # Hygiene: release-x.y.z branches whose work is already in main are done with. Runs on every
+      # release run (also "Run workflow" by hand), so any left over are cleared too; a release
+      # branch that never made it into main is left alone.
+      - name: Delete merged release branches
+        run: |
+          for b in $(git for-each-ref --format='%(refname:strip=3)' 'refs/remotes/origin/release-*'); do
+            if git merge-base --is-ancestor "origin/$b" HEAD; then
+              git push origin --delete "$b" && echo "deleted $b" || echo "::warning::could not delete $b"
+            fi
+          done
