@@ -127,8 +127,11 @@ local function Lines(id)
   return out, more
 end
 
--- NeedRoll (a loot browser for Forever) puts where an item drops in its tooltip, from newer loot
--- tables than ours: when it's there, it goes first and we only add what it doesn't say.
+-- NeedRoll (a loot browser for Forever) lists, on item tooltips, the dungeon and raid bosses (and
+-- trash) that drop an item and the dungeon quests that reward it, from newer loot tables than
+-- ours: "<icon> Ragglesnout - Razorfen Downs". It adds them first (it hooks tooltips as it loads,
+-- we at login), so we leave out our drops in a dungeon it names, and any boss, quest, vendor or
+-- chest already named; open-world drops, vendors, crafting and chests it doesn't cover stay.
 local needRoll = false
 local function NeedRollLoaded()
   if not needRoll then -- (asked each time until it is: it may load after us)
@@ -142,10 +145,10 @@ local function NeedRollLoaded()
   return needRoll
 end
 
--- what the tooltip already says (lower case), and whether NeedRoll named a drop in it: its line is
--- an icon, then "Boss - Instance"
+-- what the tooltip already says (lower case), and NeedRoll's lines in it (an icon, then
+-- "Boss - Instance")
 local function Already(tip)
-  local text, nr = {}, false
+  local text, nr = {}, {}
   local name = tip.GetName and tip:GetName()
   if not name then return text, nr end
   local check = NeedRollLoaded()
@@ -156,7 +159,7 @@ local function Already(tip)
       if fs and fs.GetText then ok, t = pcall(fs.GetText, fs) end
       if ok and Readable(t) and type(t) == "string" and t ~= "" then
         text[#text + 1] = t:lower()
-        if check and side == "TextLeft" and t:find("^|[TA]") and t:find(" %- ") then nr = true end
+        if check and side == "TextLeft" and t:find("^|[TA]") and t:find(" %- ") then nr[#nr + 1] = t:lower() end
       end
     end
   end
@@ -173,14 +176,11 @@ function S.Add(tip, id)
   local lines, extra = Lines(id)
   if #lines == 0 then return end
   local text, nr = Already(tip)
-  local shown, more = 0, 0
-  for k, n in pairs(extra) do
-    if not (nr and k == "d") then more = more + n end -- (NeedRoll has the drops: ours aren't missed)
-  end
+  local shown, more, nrDrops = 0, 0, false
   for _, l in ipairs(lines) do
-    local kind, name = l[5], l[6]
-    if nr and (kind == "d" or kind == "w") then
-      -- NeedRoll says where it drops
+    local kind, name, zone = l[5], l[6], l[2]
+    if kind == "d" and zone ~= "" and #nr > 0 and Says(nr, zone) then
+      nrDrops = true -- NeedRoll lists this dungeon's drops (and is more up to date)
     elseif name and Says(text, name) then
       -- already in the tooltip (another addon named this boss, quest, vendor or chest)
     elseif shown < MAX_LINES then
@@ -189,6 +189,9 @@ function S.Add(tip, id)
     else
       more = more + 1
     end
+  end
+  for k, n in pairs(extra) do
+    if not (nrDrops and k == "d") then more = more + n end -- (NeedRoll counts its own drops)
   end
   if more > 0 then tip:AddLine(GREY .. format("+%d more source%s", more, more == 1 and "" or "s") .. "|r") end
 end

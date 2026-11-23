@@ -39,7 +39,7 @@ New versions come out every **Wednesday at 12:00 UTC** (8 PM Philippine time, 8 
 Found a bug or have an idea? [Open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose): there's a short form for each. The settings window has a "Report a bug / suggest" button with this link too.
 
 ## Recent changes
-- **1.4.0:** Item sources work alongside NeedRoll: when NeedRoll shows where an item drops (its loot tables are newer), its line goes first and Just the Tooltip! only adds what it doesn't say (quests, vendors, crafting, chests). A source another addon already names in the tooltip isn't repeated.
+- **1.4.0:** Item sources work alongside NeedRoll: NeedRoll's dungeon and raid loot tables are newer, so where it names the dungeon an item drops in, its line stands and Just the Tooltip! leaves its own drop out. Open-world drops, vendors, crafting and chests (which NeedRoll doesn't cover) still show. A source another addon already names in the tooltip isn't repeated.
 - **1.3.1:** Fixed: a corpse's or object's tooltip in the world could stay up after you moved off it, until you hovered something else.
 - **1.3.0:** EllesmereUI style when EllesmereUI is installed: the JTT-style tooltip becomes its flat dark panel with a thin border (quality and class colours kept), and the settings window is painted by EllesmereUI's own skinning API (your theme, accent colour and font).
 - **1.2.0:** Where gear comes from on item tooltips: quest rewards, drops, vendors, chests and professions (Show, on by default). Comes with the companion addon "Just the Tooltip!: Sources", which loads only when you hover gear.
