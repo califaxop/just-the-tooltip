@@ -134,7 +134,7 @@ local function Build(d, entry)
     if kind == "q" then
       for _, q in ipairs((Ids(rest))) do
         local r = Split(d.quests[q])
-        if r[1] and (r[3] == "" or not mine or r[3] == mine) then add("Quest", r[1], Levels(r[2]), 1, r[1]).qid = q end
+        if r[1] and (r[3] == "" or not mine or r[3] == mine) then add("Quest", r[1], Levels(r[2]), 1, r[1]) end
       end
     elseif kind == "d" or kind == "v" then
       local ids, extra = Ids(rest)
@@ -307,75 +307,6 @@ local function NeedRollLoaded()
   return needRoll
 end
 
--- Whether you've collected an item's look (from it or another with the same appearance): true or
--- false, nil for items with no look (rings) or no collection in this client. Cached until the
--- collection changes. Shown as a tick on the Source: line, as NeedRoll does.
-local collected, NO_LOOK = {}, {}
-local function Collected(id)
-  local known = collected[id]
-  if known == NO_LOOK then return nil end
-  if known ~= nil then return known end
-  local tc = C_TransmogCollection
-  if not (tc and tc.GetItemInfo) then return nil end
-  local ok, _, sourceID = pcall(tc.GetItemInfo, id)
-  if not ok or not Readable(sourceID) or not sourceID then
-    if ok then collected[id] = NO_LOOK end -- (asked again only if the call failed)
-    return nil
-  end
-  local okI, info = pcall(tc.GetAppearanceInfoBySource, sourceID)
-  known = (okI and type(info) == "table" and (info.appearanceIsCollected or info.sourceIsCollected)) and true or false
-  if not known and tc.PlayerHasTransmog then
-    local okH, has = pcall(tc.PlayerHasTransmog, id)
-    known = okH and Readable(has) and has and true or false
-  end
-  collected[id] = known
-  return known
-end
-do
-  local f = CreateFrame("Frame")
-  for _, e in ipairs({ "TRANSMOG_COLLECTION_UPDATED", "TRANSMOG_COLLECTION_SOURCE_ADDED", "TRANSMOG_COLLECTION_SOURCE_REMOVED" }) do
-    pcall(f.RegisterEvent, f, e)
-  end
-  f:SetScript("OnEvent", function() wipe(collected) end)
-end
--- Whether you've done quest `qid`: true or false, nil if unknown (no ID, or no such call).
-local function QuestDone(qid)
-  if not qid then return nil end
-  local f = (C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted) or IsQuestFlaggedCompleted
-  if not f then return nil end
-  local ok, done = pcall(f, qid)
-  if ok and Readable(done) then return done and true or false end
-end
--- a quest's ID from its name (for NeedRoll's quest lines, which name the quest only)
-local questIDs
-local function QuestID(name)
-  if not questIDs then
-    questIDs = {}
-    local d = Data()
-    for qid, v in pairs(d and d.quests or {}) do
-      local n = type(v) == "string" and v:match("^([^|]*)")
-      if n and n ~= "" and not questIDs[n:lower()] then questIDs[n:lower()] = qid end
-    end
-  end
-  return name and questIDs[name:lower()]
-end
-
-local TICK = "common-icon-checkmark"
-local tickMarkup = {}
-local function Tick(known)
-  if known == nil or not ns.db.collectedTick then return "" end
-  if tickMarkup[known] == nil then
-    if HasAtlas(TICK) then
-      tickMarkup[known] = known and format(" |A:%s:%d:%d|a", TICK, ICON, ICON)
-        or format(" |A:%s:%d:%d:0:0:140:140:140|a", TICK, ICON, ICON) -- (greyed: not collected yet)
-    else
-      tickMarkup[known] = known and format(" |TInterface\\RaidFrame\\ReadyCheck-Ready:%d:%d|t", ICON, ICON)
-        or format(" |TInterface\\RaidFrame\\ReadyCheck-Ready:%d:%d:0:0:64:64:0:64:0:64:140:140:140|t", ICON, ICON)
-    end
-  end
-  return tickMarkup[known]
-end
-
 -- With NeedRoll installed, Just the Tooltip! draws all the sources: NeedRoll's own tooltip lines are
 -- off for the session (its "tooltip lines" setting, put back as it was on logout or when our
 -- sources are turned off, so its saved setting doesn't change), and what NeedRoll knows is read
@@ -435,7 +366,7 @@ local function FromNeedRoll(id)
           local plain = t:gsub("^|T.-|t%s*", ""):gsub("^|A.-|a%s*", ""):gsub("%s*|A.-|a%s*$", ""):gsub("%s*|T.-|t%s*$", "")
           local who, where = plain:match("^(.*) %- (.-)$")
           if who and where then
-            local l = quest and { kind = "Quest", text = who, right = where, prio = 1, name = who, zone = where, qid = QuestID(who) }
+            local l = quest and { kind = "Quest", text = who, right = where, prio = 1, name = who, zone = where }
               or { kind = IsRaid(where) and "Raid" or "Dungeon", text = who .. " - " .. where, right = "", prio = 2,
                 name = who ~= "Trash" and who or nil, zone = where }
             l.order, l.nr = #res.lines, true
@@ -482,12 +413,6 @@ local function Says(text, what)
   what = what:lower()
   for _, t in ipairs(text) do if t:find(what, 1, true) then return true end end
   return false
-end
-
--- a line's tick: a quest's, once you've done it (grey: not yet); otherwise the item's look, once collected
-local function LineTick(l, id)
-  if l.kind == "Quest" then return Tick(QuestDone(l.qid)) end
-  return Tick(Collected(id))
 end
 
 function S.Add(tip, id)
@@ -554,7 +479,7 @@ function S.Add(tip, id)
   -- just one: on the heading line ("Source: [chest] Random chests and containers")
   if #show == 1 and more == 0 then
     local l = show[1]
-    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. LineTick(l, id), GREY .. l.right .. "|r")
+    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r", GREY .. l.right .. "|r")
     return
   end
   -- "Source: Dungeon, Quest", then a line for each
@@ -562,12 +487,9 @@ function S.Add(tip, id)
   for _, l in ipairs(show) do
     if not named[l.kind] then named[l.kind] = true; kinds[#kinds + 1] = l.kind end
   end
-  -- (the look's tick on the heading, unless every line is a quest: those have their own)
-  local allQuests = #show > 0
-  for _, l in ipairs(show) do if l.kind ~= "Quest" then allQuests = false end end
-  tip:AddLine(GOLD .. "Source:|r " .. WHITE .. (#kinds > 0 and table.concat(kinds, ", ") or "More") .. "|r" .. (allQuests and "" or Tick(Collected(id))))
+  tip:AddLine(GOLD .. "Source:|r " .. WHITE .. (#kinds > 0 and table.concat(kinds, ", ") or "More") .. "|r")
   for _, l in ipairs(show) do
-    tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. (l.kind == "Quest" and Tick(QuestDone(l.qid)) or ""), GREY .. l.right .. "|r")
+    tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r", GREY .. l.right .. "|r")
   end
   if more > 0 then tip:AddLine("  " .. GREY .. format("+%d more source%s", more, more == 1 and "" or "s") .. "|r") end
 end
