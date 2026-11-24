@@ -11,11 +11,13 @@ ev:SetScript("OnEvent", function(_, event, arg1)
     ns.CreateOptions()
   elseif event == "PLAYER_LOGOUT" then
     ns.Sources.Release() -- (NeedRoll's setting back as it was before it's saved)
+    ns.ReleaseOthers()
   elseif event == "PLAYER_LOGIN" then
     ns.Anchor.Hook()
     ns.Look.Hook()
     ns.Info.Hook()
     ns.Sources.Hold() -- (NeedRoll installed: its tooltip lines off, ours show what it knows)
+    ns.HoldOthers()
     ns.Look.Refresh()
     ns.Print("loaded. Type |cffffff00/jtt|r to set it up.")
     ns.CheckOthers()
@@ -35,6 +37,34 @@ function ns.CheckOthers()
     ns.Print("|cffff9933also loaded: " .. table.concat(found, ", ") .. ".|r Just the Tooltip! has the last say on where the tooltip goes, "
       .. "but for the cleanest result turn off that addon's tooltip options (or the addon).")
   end
+end
+
+-- Lines other addons add that the tooltip already has: Just the Tooltip! takes precedence. Auctionator's
+-- "Vendor x1" repeats the game's own Sell Price, so it's turned off for the session (Auctionator's
+-- auction prices stay). Your Auctionator setting is put back on logout, before it's saved, unless you
+-- turned it on again in Auctionator meanwhile.
+local heldVendor -- (Auctionator's vendor-tooltip setting as it was, while we hold it off)
+local function AuctionatorConfig()
+  local A = _G.Auctionator
+  local C = type(A) == "table" and A.Config
+  if type(C) == "table" and type(C.Get) == "function" and type(C.Set) == "function" and type(C.Options) == "table"
+    and C.Options.VENDOR_TOOLTIPS then return C end
+end
+function ns.HoldOthers()
+  local C = AuctionatorConfig()
+  if not C then return end
+  local ok, on = pcall(C.Get, C.Options.VENDOR_TOOLTIPS)
+  if ok and on then
+    heldVendor = true
+    pcall(C.Set, C.Options.VENDOR_TOOLTIPS, false)
+  end
+end
+function ns.ReleaseOthers()
+  local C = AuctionatorConfig()
+  if not (C and heldVendor) then return end
+  local ok, on = pcall(C.Get, C.Options.VENDOR_TOOLTIPS)
+  if ok and on == false then pcall(C.Set, C.Options.VENDOR_TOOLTIPS, true) end
+  heldVendor = nil
 end
 
 SLASH_JUSTTHETOOLTIP1, SLASH_JUSTTHETOOLTIP2 = "/jtt", "/justthetooltip"
