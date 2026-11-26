@@ -9,11 +9,17 @@ local W = "Interface\\Buttons\\WHITE8X8"
 local DIALOG_BG = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark"
 local DIVIDER = "Interface\\Common\\UI-TooltipDivider-Transparent"
 
+-- the first of these font objects that exists and is a readable size (another addon can shrink a
+-- shared one: EllesmereUI's quest tracker sets the game's tracker fonts to 1 px)
 local function FontObj(...)
   for i = 1, select("#", ...) do
     local f = _G[select(i, ...)]
-    if f then return f end
+    if f and f.GetFont then
+      local ok, path, size = pcall(f.GetFont, f)
+      if ok and type(path) == "string" and type(size) == "number" and size >= 8 then return f end
+    end
   end
+  return _G.GameFontHighlight
 end
 
 local PALETTES = {
