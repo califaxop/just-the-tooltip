@@ -1,5 +1,5 @@
 -- The look of this addon's settings, shared with our other addons: FlareUI's dialog background,
--- bronze border, heading font and colours when FlareUI is installed (and the style is on),
+-- bronze border, heading font and colours when FlareUI is installed,
 -- otherwise a dark panel with a thin brown border. Widgets are flat and drawn in that palette.
 local _, ns = ...
 local UI = {}
@@ -424,7 +424,7 @@ function UI.Popup(name, width, height)
   win:SetMovable(false); win:SetScript("OnDragStart", nil); win:SetScript("OnDragStop", nil)
   local solid = win:CreateTexture(nil, "BACKGROUND", nil, -8)
   solid:SetPoint("TOPLEFT", 3, -3); solid:SetPoint("BOTTOMRIGHT", -3, 3)
-  UI.Skin(function(th) -- solid, in EllesmereUI's panel colour when its style is on
+  UI.Skin(function(th) -- solid, in EllesmereUI's panel colour when it's installed
     local ok, r, g, b = false
     if th.eui and UI.euiSkin and UI.euiSkin.GetPanelColor then ok, r, g, b = pcall(UI.euiSkin.GetPanelColor) end
     if ok and r then solid:SetColorTexture(r, g, b, 1) else solid:SetColorTexture(0.04, 0.035, 0.03, 1) end

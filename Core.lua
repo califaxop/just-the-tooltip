@@ -40,8 +40,6 @@ function ns.LoadDB()
   for k, v in pairs(ns.DEFAULTS) do
     if JustTheTooltipDB[k] == nil then JustTheTooltipDB[k] = Copy(v) end
   end
-  -- no window-style settings any more: the window follows EllesmereUI / FlareUI when installed
-  JustTheTooltipDB.flareStyle, JustTheTooltipDB.euiStyle = nil, nil
   ns.db = JustTheTooltipDB
 end
 
