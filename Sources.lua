@@ -31,7 +31,7 @@ function S.Available()
   if type(JustTheTooltipSources) == "table" then return true end
   local get = C_AddOns and C_AddOns.GetAddOnInfo or GetAddOnInfo
   if not get then return false end
-  local ok, name, _, _, loadable, reason = pcall(get, "JustTheTooltip_Sources")
+  local ok, name, _, _, _, reason = pcall(get, "JustTheTooltip_Sources")
   return ok and name ~= nil and reason ~= "MISSING" and reason ~= "DISABLED"
 end
 
