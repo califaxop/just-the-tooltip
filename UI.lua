@@ -55,7 +55,8 @@ if UI.HasEllesmere() then
 end
 function UI.EUI()
   local S = UI.euiSkin
-  if S and not (ns.db and ns.db.euiStyle == false) and (not S.IsEnabled or S.IsEnabled()) then return S end
+  -- (no setting: the window follows EllesmereUI whenever it's installed and skinning us)
+  if S and (not S.IsEnabled or S.IsEnabled()) then return S end
 end
 
 -- the player's EllesmereUI font, as font objects (made once per font)
@@ -75,7 +76,7 @@ end
 
 function UI.Theme()
   local S = UI.EUI()
-  local flare = not S and (not ns.db or ns.db.flareStyle ~= false) and UI.FlareBorder() ~= nil
+  local flare = not S and UI.FlareBorder() ~= nil -- FlareUI's look whenever it's installed
   local th = {}
   for k, v in pairs(flare and PALETTES.flare or PALETTES.plain) do th[k] = v end
   th.flare = flare

@@ -25,8 +25,6 @@ ns.DEFAULTS = {
   healthBar = true,       -- the health bar under unit tooltips
   combatHide = false,
   instantHide = true,     -- world tooltips vanish when you stop hovering (no fade)     -- hide tooltips for things in the world during combat (Shift shows them)
-  flareStyle = true,
-  euiStyle = true,       -- EllesmereUI look when EllesmereUI is installed (its skinning API)
 }
 
 local function Copy(v)
@@ -42,6 +40,8 @@ function ns.LoadDB()
   for k, v in pairs(ns.DEFAULTS) do
     if JustTheTooltipDB[k] == nil then JustTheTooltipDB[k] = Copy(v) end
   end
+  -- no window-style settings any more: the window follows EllesmereUI / FlareUI when installed
+  JustTheTooltipDB.flareStyle, JustTheTooltipDB.euiStyle = nil, nil
   ns.db = JustTheTooltipDB
 end
 
