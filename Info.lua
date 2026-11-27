@@ -48,17 +48,29 @@ local function AddID(tip, label, id)
   tip:AddLine(GREY .. label .. ": " .. id .. "|r")
 end
 
--- the item a tooltip shows, as a link
-local function ItemLink(tip, data)
-  if tip.GetItem then
-    local ok, _, link = pcall(tip.GetItem, tip)
-    if ok and Readable(link) and type(link) == "string" then return link end
+-- Any line already saying this? (1.8.0) Each of JTT's lines is checked against the tooltip's text
+-- before it's added: JTT's own (a second post-call for the same tooltip) or another addon's.
+-- `test(plainLowerText)` -> true when found.
+local function Says(tip, test)
+  local name = tip.GetName and tip:GetName()
+  if type(name) ~= "string" then return false end
+  local ok, n = pcall(tip.NumLines, tip)
+  for i = 1, (ok and type(n) == "number") and n or 0 do
+    local l, r = LineText(name, "Left", i), LineText(name, "Right", i)
+    if l and test(Plain(l):lower(), r and Plain(r):lower() or "") then return true end
   end
-  if type(data) == "table" then
-    if Readable(data.hyperlink) and type(data.hyperlink) == "string" then return data.hyperlink end
-    if Readable(data.id) and type(data.id) == "number" then return "item:" .. data.id end
-  end
+  return false
 end
+I.Says = Says
+-- an item level line naming this level ("Item level 45", "Item Level: 45", "iLvl 45")
+function I.NamesLevel(left, right, level)
+  local text = left .. " " .. right
+  if not (text:find("item level", 1, true) or text:find("ilvl", 1, true)) then return false end
+  for n in text:gmatch("%d+") do if tonumber(n) == level then return true end end
+  return false
+end
+-- a target line ("Target: Name", "Targeting: Name", "Target: >> You <<")
+function I.NamesTarget(left) return left:find("^%s*target") ~= nil end
 
 -- The item level to show, or nil: gear only, by what the item is (weapons, class 2; armor, class
 -- 4) and where it's worn, never by its level alone. (GetItemInfo's returns, in order: name, link,
@@ -72,50 +84,42 @@ function I.GearLevel(level, equipLoc, classID)
   return level
 end
 
-local function ItemLevel(tip, link)
+local function ItemLevel(tip, it)
   if not ns.db.itemLevel then return end
   -- (not loaded yet: nothing now; the game shows the tooltip again once the item's data arrives)
-  local _, _, _, level, _, _, _, _, equipLoc, _, _, classID = ns.Safe(C_Item and C_Item.GetItemInfo or GetItemInfo, link)
-  level = I.GearLevel(level, equipLoc, classID)
-  if level then tip:AddLine(GOLD .. "Item level " .. level .. "|r") end
+  local level = I.GearLevel(it.level, it.equipLoc, it.classID)
+  if not level or Says(tip, function(l, r) return I.NamesLevel(l, r, level) end) then return end
+  tip:AddLine(GOLD .. "Item level " .. level .. "|r")
 end
 
+-- (1.8.0) The item's facts gathered once (Facts.lua) and handed to each category; each category
+-- runs on its own (Facts.Run), so one failing leaves the rest.
+local Run = ns.Facts.Run
 function I.OnItem(tip, data)
-  local link = ItemLink(tip, data)
-  local id = type(data) == "table" and Readable(data.id) and data.id
-  if not id and link then id = tonumber(link:match("item:(%d+)")) end
-  if link then ItemLevel(tip, link) end
-  if ns.Sources then ns.Sources.Add(tip, id) end
-  AddID(tip, "Item ID", id)
-  ns.Look.OnItem(tip, link)
+  local it = ns.Facts.Item(tip, data)
+  Run("itemLevel", ItemLevel, tip, it)
+  if ns.Sources then Run("sources", ns.Sources.Add, tip, it.id) end
+  Run("itemId", AddID, tip, "Item ID", it.id)
+  Run("look", ns.Look.OnItem, tip, it)
 end
 
 function I.OnSpell(tip, data)
-  local id = type(data) == "table" and data.id
-  AddID(tip, "Spell ID", id)
+  Run("spellId", AddID, tip, "Spell ID", ns.Facts.Spell(data).id)
 end
 
 ---------------------------------------------------------------------------
 -- Units
 ---------------------------------------------------------------------------
--- (unit details through ns.Safe, 1.6.0: one that can't be read leaves the rest of the tooltip be)
-local Safe = ns.Safe
-local function UnitOf(tip)
-  if not tip.GetUnit then return nil end
-  local _, unit = Safe(tip.GetUnit, tip)
-  if type(unit) == "string" then return unit end
-  -- (the game can keep who's under the mouse secret: then there's no unit to name)
-  if Safe(UnitExists, "mouseover") == true then return "mouseover" end
-end
+-- (unit facts from Facts.lua: each detail read once, safely; one that can't be read leaves the rest)
+local UnitOf = ns.Facts.UnitOf
 
-local function NameColor(unit)
-  if Safe(UnitIsPlayer, unit) == true then
-    local _, class = Safe(UnitClass, unit)
-    local c = type(class) == "string" and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+local function NameColor(u)
+  if u.isPlayer == true and u.class then
+    local c = RAID_CLASS_COLORS and RAID_CLASS_COLORS[u.class]
     if c then return format("|cff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255) end
   end
-  local r = Safe(UnitReaction, unit, "player")
-  if type(r) == "number" then
+  local r = u.reaction
+  if r then
     if r <= 3 then return "|cffff4040" elseif r == 4 then return "|cffffff40" else return "|cff40ff40" end
   end
   return "|cffffffff"
@@ -123,14 +127,12 @@ end
 
 local function AddTarget(tip, unit)
   if not ns.db.target then return end
-  local t = unit .. "target"
-  if Safe(UnitExists, t) ~= true then return end
-  local isMe = Safe(UnitIsUnit, t, "player")
-  if isMe == nil then return end -- (can't tell who it is: no line rather than a wrong one)
-  if isMe then tip:AddLine("Target: |cffff4040>> You <<|r"); return end
-  local name = Safe(UnitName, t)
-  if type(name) ~= "string" or name == "" then return end
-  tip:AddLine("Target: " .. NameColor(t) .. name .. "|r")
+  local t = ns.Facts.Target(unit)
+  if not t or t.isMe == nil then return end -- (no target, or can't tell who: no line rather than a wrong one)
+  if Says(tip, I.NamesTarget) then return end -- (already one: JTT's own or another addon's)
+  if t.isMe then tip:AddLine("Target: |cffff4040>> You <<|r"); return end
+  if not t.name then return end
+  tip:AddLine("Target: " .. NameColor(t) .. t.name .. "|r")
 end
 
 function I.OnUnit(tip, data)
@@ -146,8 +148,8 @@ function I.OnUnit(tip, data)
   if ns.Anchor.InWorld(tip:GetOwner()) then ns.Anchor.WatchMouseover() else ns.Anchor.MarkUnit() end
   local unit = UnitOf(tip)
   if not unit then return end
-  AddTarget(tip, unit)
-  ns.Look.OnUnit(tip, unit)
+  Run("target", AddTarget, tip, unit)
+  Run("look", ns.Look.OnUnit, tip, ns.Facts.Unit(unit))
 end
 
 -- a corpse or an object in the world: watch for the mouse leaving it too

@@ -104,6 +104,13 @@ C_Item = {
     return "Item", "link", i.quality or 2, i.level, 1, "Type", "Sub", 1, i.equipLoc, 0, 10, i.classID, 0
   end,
   GetItemQualityByID = function(link) local i = Item(link); return i and i.quality end,
+  -- what the item is, without the cache (MOCK.instant: items the client knows the kind of only)
+  GetItemInfoInstant = function(link)
+    local id = type(link) == "number" and link or tonumber(tostring(link):match("item:(%d+)"))
+    local i = MOCK.items[id] or (MOCK.instant or {})[id]
+    if not i then return nil end
+    return id, "Type", "Sub", i.equipLoc, 0, i.classID, 0
+  end,
 }
 
 -- the rest

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.8.0 (Milestone 3: information engine; test build)
+
+- Each tooltip's item, spell or unit details are read once and shared by every line and colour,
+  so fewer questions go to the game for each tooltip.
+- An item's kind is known before the game has its full details. The item level still appears once
+  they arrive.
+- Each kind of information works on its own: if one runs into an error, the rest of the tooltip
+  still appears. The error is said once and listed in the new `/jtt info`.
+- An item level or target line another addon already shows isn't added a second time, and Just the
+  Tooltip!'s own lines never appear twice on one tooltip.
+- New `/jtt source <item>`: every place an item comes from, where Just the Tooltip! learned it
+  (its data, Questie, NeedRoll), and how far to trust it. Drops are marked as ordered by Classic
+  1.12 drop chances. The tooltips themselves stay as they were.
+
 ## 1.7.0 (Milestone 2: tooltip lifecycle and compatibility; test build)
 
 - Each tooltip starts with a clean slate. Nothing about the tooltip before it (a unit, a thing in

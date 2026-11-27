@@ -135,6 +135,7 @@ local function BugReport()
   L[#L + 1] = format("sources addon: %s; FlareUI: %s; EllesmereUI: %s", srcOk and "installed" or "not installed",
     yes(type(FlareUI) == "table"), yes(UI.HasEllesmere()))
   for _, l in ipairs(ns.CompatLines()) do L[#L + 1] = l end
+  for _, l in ipairs(ns.Facts.InfoLines()) do L[#L + 1] = l end
   local hooks = {}
   for k in pairs(ns.hooks) do hooks[#hooks + 1] = k end
   table.sort(hooks)

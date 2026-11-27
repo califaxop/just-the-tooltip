@@ -136,9 +136,25 @@ local function Sort(t)
   end)
 end
 
+-- Provenance (1.8.0): each line says where it came from (`from`) and how far to trust it
+-- (`trust`). Ordinary tooltips don't show this: /jtt source <item> does (SOURCE_DATA.md).
+local FROM = {
+  data = "JTT's data (QuestieDB, WoW: Forever)", questie = "Questie, in game", needroll = "NeedRoll, in game",
+}
+local TRUST = {
+  Quest = "database", Vendor = "database (your faction)", Chest = "database", ["World Drop"] = "database (many creatures)",
+  ["Random Chests"] = "database (random loot)", Crafted = "the game client's tables",
+}
+S.FROM = FROM
+-- a drop's trust: database; its place in the list from Classic 1.12's loot tables when known
+local function DropTrust(chance)
+  return chance and "database; listed by Classic 1.12 drop chance (not Forever's)" or "database"
+end
+
 -- an item's sources from `entry` (our data's format, looked up in `d`): { { kind, text, right,
--- prio, order, name, zone, skill }, ... } and how many more of each kind there are past those named
-local function Build(d, entry)
+-- prio, order, name, zone, skill, from, trust }, ... } and how many more of each kind there are past
+-- those named. `origin`: "data" (ours) or "questie".
+local function Build(d, entry, origin)
   local mine = UnitFactionGroup and UnitFactionGroup("player")
   mine = (mine == "Alliance" and "A") or (mine == "Horde" and "H") or nil
   local instances = d.instances or {}
@@ -147,7 +163,8 @@ local function Build(d, entry)
   local function add(kind, text, right, prio, name, zone, skill) -- (two chests of the same name: one line)
     if seen[kind .. text] then return {} end
     seen[kind .. text] = true
-    local l = { kind = kind, text = text, right = right or "", prio = prio, order = #out, name = name, zone = zone or "", skill = skill }
+    local l = { kind = kind, text = text, right = right or "", prio = prio, order = #out, name = name, zone = zone or "", skill = skill,
+      from = FROM[origin or "data"], trust = TRUST[kind] or "database" }
     out[#out + 1] = l
     return l
   end
@@ -171,11 +188,13 @@ local function Build(d, entry)
             local rankN = tonumber(r[4]) or 0
             -- (all drops together, the likeliest first: see Sort)
             if inst then -- in a dungeon or raid: "Herod - Scarlet Monastery"
-              add(inst == 2 and "Raid" or "Dungeon", r[1] .. (zone ~= "" and (" - " .. zone) or ""), nil, 2, r[1], zone).chance = chance[n]
+              local l = add(inst == 2 and "Raid" or "Dungeon", r[1] .. (zone ~= "" and (" - " .. zone) or ""), nil, 2, r[1], zone)
+              l.chance = chance[n]; if l.kind then l.trust = DropTrust(l.chance) end
             else -- out in the world: the creature, its rank, and where
               local rank = RANK[rankN]
-              add(rankN == 3 and "Boss" or "Enemy", r[1] .. ((rank and rankN ~= 3) and (GREY .. " (" .. rank .. ")|r") or ""),
-                zone, 2, r[1], zone).chance = chance[n]
+              local l = add(rankN == 3 and "Boss" or "Enemy", r[1] .. ((rank and rankN ~= 3) and (GREY .. " (" .. rank .. ")|r") or ""),
+                zone, 2, r[1], zone)
+              l.chance = chance[n]; if l.kind then l.trust = DropTrust(l.chance) end
             end
           elseif not mine or (r[6] or ""):find(mine) then
             add("Vendor", r[1], zone, 4, r[1], zone)
@@ -331,7 +350,7 @@ local function Lines(id)
     end
     d, entry = qd, qentry
   end
-  local out, more = Build(d, entry)
+  local out, more = Build(d, entry, d == Data() and "data" or "questie")
   cache[id] = { out, more }
   return out, more
 end
@@ -418,6 +437,7 @@ local function FromNeedRoll(id)
             local l = quest and { kind = "Quest", text = who, right = where, prio = 1, name = who, zone = where }
               or { kind = IsRaid(where) and "Raid" or "Dungeon", text = who .. " - " .. where, right = "", prio = 2,
                 name = who ~= "Trash" and who or nil, zone = where }
+            l.from, l.trust = FROM.needroll, quest and "NeedRoll's dungeon quests" or "NeedRoll's loot tables (newer than JTT's)"
             l.order, l.nr = #res.lines, true
             res.lines[#res.lines + 1] = l
             afterNR = true
@@ -436,6 +456,26 @@ local function FromNeedRoll(id)
   scanTip:Hide()
   nrCache[id] = res
   return res
+end
+
+-- /jtt source <item>: every source known for an item (not only the first three), each with where
+-- it came from and how far to trust it; NeedRoll's too while JTT shows them its way. Lines of text.
+function S.Explain(id)
+  local L = {}
+  if type(id) ~= "number" then return { "give an item ID or shift-click an item: /jtt source <item>" } end
+  local lines, more = Lines(id)
+  local all = {}
+  for _, l in ipairs(lines) do all[#all + 1] = l end
+  if held and CanHold() then for _, l in ipairs(FromNeedRoll(id).lines) do all[#all + 1] = l end end
+  L[1] = format("item %d: %d source%s known%s (data: %s; Questie: %s)", id, #all, #all == 1 and "" or "s",
+    (function() local n = 0 for _, v in pairs(more) do n = n + v end return n > 0 and format(", +%d more not named", n) or "" end)(),
+    S.loadState, S.QuestieState())
+  for _, l in ipairs(all) do
+    local plain = (l.text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+    L[#L + 1] = format("  %s: %s%s | from %s | %s%s", l.kind, plain, l.right ~= "" and (" (" .. l.right .. ")") or "",
+      l.from or "?", l.trust or "?", l.chance and format(" | Classic 1.12 chance %s%%", l.chance) or "")
+  end
+  return L
 end
 
 -- what the tooltip already says (lower case), and NeedRoll's lines in it (an icon, then
@@ -468,6 +508,8 @@ function S.Add(tip, id)
   if not (ns.db.sources and Readable(id) and type(id) == "number") then return end
   local lines, extra = Lines(id)
   local text, nr = Already(tip)
+  -- JTT's own heading already there (the same tooltip written to twice): not again (1.8.0)
+  for _, t in ipairs(text) do if t:find("^|cffffd100source:|r") then return end end
   -- NeedRoll's lines off: show what it knows our way. (Turned back on in its own settings, so they're
   -- in the tooltip: leave them, and add only what they don't say, below.)
   local nrRes = held and CanHold() and #nr == 0 and FromNeedRoll(id) or nil

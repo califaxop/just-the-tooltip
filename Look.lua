@@ -83,18 +83,16 @@ end
 L.Paint = Paint
 
 -- the border color for what the tooltip shows (nil = the style's own)
-local function QualityColor(link)
-  local q = Safe(C_Item and C_Item.GetItemQualityByID, link)
+local function QualityColor(q)
   if type(q) ~= "number" or q < 2 then return nil end -- grey / white items keep the plain border
   local c = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[q]
   if c then return c.r, c.g, c.b end
 end
 
--- (unit details through ns.Safe, 1.6.0: unreadable ones give no colour, never an error)
-local function ClassColor(unit)
-  if not unit or Safe(UnitIsPlayer, unit) ~= true then return nil end
-  local _, class = Safe(UnitClass, unit)
-  if type(class) ~= "string" then return nil end
+-- (unit facts from Facts.lua, 1.8.0: read once; unreadable ones give no colour, never an error)
+local function ClassColor(u)
+  if not u or u.isPlayer ~= true or not u.class then return nil end
+  local class = u.class
   local c = Safe(C_ClassColor and C_ClassColor.GetClassColor, class) or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class])
   if type(c) == "table" and type(c.r) == "number" then return c.r, c.g, c.b end
 end
@@ -105,8 +103,8 @@ function ns.OnLooksChanged() L.stamp = L.stamp + 1 end
 
 local function SetColor(tip, r, g, b) colors[tip] = r and { r, g, b } or nil end
 
-function L.OnItem(tip, link)
-  if ns.db.colorBorder then SetColor(tip, QualityColor(link)) else SetColor(tip) end
+function L.OnItem(tip, it)
+  if ns.db.colorBorder then SetColor(tip, QualityColor(it.quality)) else SetColor(tip) end
   Paint(tip)
 end
 
@@ -115,20 +113,20 @@ end
 local REACTION = {
   hostile = { 0.95, 0.20, 0.20 }, neutral = { 1.00, 0.85, 0.10 }, friendly = { 0.20, 0.85, 0.25 }, tapped = { 0.55, 0.55, 0.55 },
 }
-local function ReactionColor(unit)
-  if not (ns.db.colorNPC and unit) or Safe(UnitIsPlayer, unit) ~= false then return nil end -- (players, or can't tell)
-  if Safe(UnitIsTapDenied, unit) == true then return unpack(REACTION.tapped) end
-  local r = Safe(UnitReaction, unit, "player")
+local function ReactionColor(u)
+  if not (ns.db.colorNPC and u) or u.isPlayer ~= false then return nil end -- (players, or can't tell)
+  if u.tapped == true then return unpack(REACTION.tapped) end
+  local r = u.reaction
   if type(r) ~= "number" then return nil end
   local c = r <= 3 and REACTION.hostile or r == 4 and REACTION.neutral or REACTION.friendly
   return c[1], c[2], c[3]
 end
 
-function L.OnUnit(tip, unit)
+function L.OnUnit(tip, u)
   local r, g, b
-  if ns.db.colorBorder then r, g, b = ClassColor(unit) end
+  if ns.db.colorBorder then r, g, b = ClassColor(u) end
   local isPlayer = r ~= nil
-  if not r then r, g, b = ReactionColor(unit) end
+  if not r then r, g, b = ReactionColor(u) end
   SetColor(tip, r, g, b)
   local name = tip.GetName and tip:GetName()
   if isPlayer and ns.db.colorBorder and type(name) == "string" then -- the player's name in their class color too

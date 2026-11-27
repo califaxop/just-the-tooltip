@@ -421,6 +421,123 @@ def _():
     assert(t:find("2 moved", 1, true) == nil and t:find("1 moved by something else", 1, true) and t:find("Questie: absent", 1, true), t)
     """
 
+# ---------------------------------------------------------------------------------------------
+# M3: the information engine
+# ---------------------------------------------------------------------------------------------
+@test("facts: an item's kind is known before the client has it (GetItemInfoInstant); level and quality once it has")
+def _():
+    """
+    local F = NS.Facts
+    MOCK.instant = { [7000] = { equipLoc = "INVTYPE_CHEST", classID = 4 } }
+    local it = F.Item(nil, { id = 7000 })
+    assert(it.id == 7000 and it.link == "item:7000" and it.classID == 4 and it.equipLoc == "INVTYPE_CHEST", "kind known")
+    assert(it.cached == false and it.level == nil and it.quality == nil, "level and quality not yet")
+    MOCK.items[7000] = { level = 33, equipLoc = "INVTYPE_CHEST", classID = 4, quality = 3 }
+    it = F.Item(nil, { id = 7000 })
+    assert(it.cached and it.level == 33 and it.quality == 3)
+    assert(F.Item(nil, nil).id == nil, "nothing to go on: an empty record, no error")
+    """
+
+@test("facts: each unit detail is asked of the game once per tooltip, shared by the target line and the colours")
+def _():
+    """
+    local calls = {}
+    for _, fn in ipairs({ "UnitIsPlayer", "UnitClass", "UnitReaction" }) do
+      local old = _G[fn]
+      _G[fn] = function(t, ...) local k = fn .. ":" .. t; calls[k] = (calls[k] or 0) + 1; return old(t, ...) end
+    end
+    local T = GameTooltip
+    T.GetUnit = function() return "Defias", "mouseover" end
+    MOCK.units.mouseover = { exists = true, isPlayer = false, reaction = 2 }
+    T:ClearLines(); T:AddLine("Defias"); T:SetOwner(UIParent)
+    MOCK.Post(Enum.TooltipDataType.Unit, T, {})
+    assert(calls["UnitIsPlayer:mouseover"] == 1 and calls["UnitReaction:mouseover"] == 1,
+      "once each (1.7.0 asked UnitIsPlayer twice): " .. tostring(calls["UnitIsPlayer:mouseover"]))
+    """
+
+@test("categories: one failing leaves the others; its error is kept and said once; /jtt info lists it")
+def _():
+    """
+    MOCK.items[19019] = { level = 80, equipLoc = "INVTYPE_WEAPONMAINHAND", classID = 2, quality = 5 }
+    NS.Sources.Add = function() error("sources broke") end
+    local T = GameTooltip
+    PRINTS = {}
+    T:ClearLines(); T:AddLine("Thunderfury")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 19019 })
+    T:ClearLines(); T:AddLine("Thunderfury")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 19019 })
+    assert(GameTooltipTextLeft2._text:find("Item level 80", 1, true) and GameTooltipTextLeft3._text:find("Item ID: 19019", 1, true),
+      "the level and the ID still there")
+    assert(NS.Facts.errors.sources.n == 2, "kept")
+    local said = 0
+    for _, p in ipairs(PRINTS) do if p:find("an error in", 1, true) then said = said + 1 end end
+    assert(said == 1, "said once: " .. said)
+    local info = table.concat(NS.Facts.InfoLines(), " / ")
+    assert(info:find("Where gear comes from: on; available; Verified in WoW Forever; errors: 2", 1, true), info)
+    """
+
+@test("categories: one the client can't do is skipped quietly and listed as not available")
+def _():
+    """
+    C_Item.GetItemInfo = nil; GetItemInfo = nil
+    MOCK.items[19019] = { level = 80, equipLoc = "INVTYPE_WEAPONMAINHAND", classID = 2 }
+    local T = GameTooltip
+    PRINTS = {}
+    T:ClearLines(); T:AddLine("Thunderfury")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 19019 })
+    assert(T:NumLines() == 2 and GameTooltipTextLeft2._text:find("Item ID", 1, true), "only the ID")
+    assert(#PRINTS == 0, "no error said")
+    assert(table.concat(NS.Facts.InfoLines(), " / "):find("Item level: on; not on this client (C_Item.GetItemInfo|GetItemInfo)", 1, true))
+    """
+
+@test("duplicates: an item level or target line already there isn't added; a second pass on the same tooltip adds nothing")
+def _():
+    """
+    MOCK.items[19019] = { level = 80, equipLoc = "INVTYPE_WEAPONMAINHAND", classID = 2, quality = 5 }
+    JustTheTooltipSources = { items = { [19019] = "c164" }, quests = {}, npcs = {}, objects = {}, instances = {}, skills = { [164] = "Blacksmithing" } }
+    local T = GameTooltip
+    -- another addon's item level
+    T:ClearLines(); T:AddLine("Thunderfury"); T:AddLine("Item Level: 80")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 19019 })
+    for i = 3, T:NumLines() do assert(not GameTooltipTextLeft3._text:find("Item level", 1, true)) end
+    -- the same tooltip written to twice: one of each JTT line
+    T:ClearLines(); T:AddLine("Thunderfury")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 19019 })
+    local n = T:NumLines()
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 19019 })
+    assert(T:NumLines() == n and n == 4, "level, source, ID once each: " .. n .. " then " .. T:NumLines())
+    -- another addon's target line
+    T.GetUnit = function() return "Bob", "mouseover" end
+    MOCK.units.mouseovertarget = { exists = true, isMe = false, name = "Kurran" }
+    T:ClearLines(); T:AddLine("Bob"); T:AddLine("Targeting: Kurran")
+    MOCK.Post(Enum.TooltipDataType.Unit, T, {})
+    assert(T:NumLines() == 2, "no second target line")
+    """
+
+@test("provenance: each source line says where it came from and how far to trust it; /jtt source lists them all")
+def _():
+    """
+    JustTheTooltipSources = { items = { [500] = "q10;d20:15.5,21;c164" }, quests = { [10] = "A Quest|20|" },
+      npcs = { [20] = "Hogger|11|11|2|12|", [21] = "Gnoll|10|10|0|12|" }, objects = {}, instances = {}, skills = { [164] = "Blacksmithing" } }
+    local L = NS.Sources.Explain(500)
+    local t = table.concat(L, " / ")
+    assert(L[1]:find("item 500: 4 sources known", 1, true), L[1])
+    assert(t:find("Quest: A Quest (Level 20) | from JTT's data (QuestieDB, WoW: Forever) | database", 1, true), t)
+    assert(t:find("Hogger", 1, true) and t:find("listed by Classic 1.12 drop chance (not Forever's) | Classic 1.12 chance 15.5%", 1, true), t)
+    assert(t:find("Crafted: Blacksmithing | from JTT's data (QuestieDB, WoW: Forever) | the game client's tables", 1, true), t)
+    -- the tooltip itself stays clean: no provenance on it
+    local T = GameTooltip
+    T:ClearLines(); T:AddLine("Item")
+    NS.Sources.Add(T, 500)
+    for i = 1, T:NumLines() do
+      local l = _G["GameTooltipTextLeft" .. i]._text or ""
+      assert(not l:find("from ", 1, true) and not l:find("1.12", 1, true), l)
+    end
+    PRINTS = {}
+    SlashCmdList.JUSTTHETOOLTIP("source item:500")
+    assert(PRINTS[1] and PRINTS[1]:find("item 500", 1, true))
+    """
+
 if __name__ == '__main__':
     print(f"\n{count - len(failures)}/{count} passed")
     sys.exit(1 if failures else 0)

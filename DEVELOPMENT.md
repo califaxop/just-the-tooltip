@@ -15,8 +15,8 @@ file holds the architecture, conventions, milestone plan and progress.
 | # | Milestone | Status |
 |---|---|---|
 | 1 | Tooltip accuracy and reliability | Done in 1.6.0, verified in game, reviewed |
-| 2 | Tooltip lifecycle and compatibility | **Done in 1.7.0, verified in game, waiting for review** |
-| 3 | Information engine | Not started |
+| 2 | Tooltip lifecycle and compatibility | Done in 1.7.0, verified in game, reviewed |
+| 3 | Information engine | **Done in 1.8.0 (offline); in-game checks pending, then review** |
 | 4 | Customization and presentation | Not started |
 | 5 | Expanded information and source database | Not started |
 | 6 | Diagnostics and release | Not started |
@@ -47,11 +47,12 @@ Each milestone is reviewed before the next starts.
 - **Hygiene.** No unused code or settings. Offline tests (`tests/run_tests.py`) cover the logic;
   game behaviour is checked in game (checklists below), never claimed from the tests.
 
-## Architecture (1.7.0)
+## Architecture (1.8.0)
 
 | File | Role |
 |---|---|
 | `Core.lua` | Defaults and saved variables (`ns.LoadDB`); which tooltips are ours (`ns.IsOurs`, `ns.Tooltips`); `ns.Safe` (safe game calls); `ns.Once` / `ns.hooks` (the hook registry) |
+| `Facts.lua` | (1.8.0) What a tooltip is about, gathered once: `Facts.Item`, `Facts.Spell`, `Facts.Unit` / `Facts.Target` / `Facts.UnitOf`; game functions by name (`Facts.Resolve`); the information categories (`Facts.CATEGORIES`, `Facts.Run`, `Facts.InfoLines`) |
 | `UI.lua` | The shared settings-window kit (FlareUI / EllesmereUI / plain styles, widgets, pop-ups, the Bugs & Feedback window) |
 | `Anchor.lua` | Where the tooltip goes (the game's spot, the cursor, your own spot) and when a world tooltip goes away: the update driver, the lifecycle state, `/jtt trace` |
 | `Look.lua` | The tooltip's look: JTT style or Blizzard's, quality / class / reaction borders, class-coloured names, size |
@@ -266,4 +267,28 @@ Results (1.7.0 test build):
   lines shown JTT's way); Auctionator's vendor line off for the session; Questie ready; source
   data loaded.
 
-Milestone 2 verified in game; awaiting review before Milestone 3.
+Milestone 2 verified in game and reviewed.
+
+## Milestone 3 (1.8.0)
+
+| # | Change | Notes |
+|---|---|---|
+| 11 | One place for item, spell and unit information | `Facts.lua`. Items: id and link; the kind (`GetItemInfoInstant`, no cache needed); level and quality once cached. Spells: the ID from the tooltip's data. Units: player or not, class, reaction, tapped, each read once through `ns.Safe` and shared. Before, Look and Info each asked their own (UnitIsPlayer twice per unit tooltip, quality by a separate call) |
+| 12 | Information categories | Item ID, Spell ID, Item level, Where gear comes from, Target line, Look. Each lists the game functions it needs and how far it's verified, and runs on its own (`Facts.Run`). A category this client can't do is skipped quietly. An error stops only that category: it's kept, said once in chat, and listed by `/jtt info` and `/jtt report` |
+| 13 | Source provenance | Every source line carries `from`: JTT's data (QuestieDB, WoW: Forever), Questie in game, or NeedRoll in game. It also carries `trust`: database, database for your faction, the client's tables, NeedRoll's newer loot tables, or "listed by Classic 1.12 drop chance (not Forever's)". Tooltips stay clean; `/jtt source <item>` lists every source with both (and the Classic chance where known) |
+| 14 | Duplicate prevention | Before adding a line, JTT checks the tooltip's text. An item level already there (any wording: "Item Level: 80", "iLvl 80") or a target line ("Target:", "Targeting:") isn't repeated. JTT's own Source heading isn't added twice to one tooltip |
+
+### In-game checklist (Milestone 3 → 4)
+
+1. Install 1.8.0 and `/reload`. Tooltips look as in 1.7.0: IDs, item level, sources, target line,
+   colours, and no Lua errors.
+2. `/jtt info`: six categories, each "on" (or off as you've set it), "available", "Verified in WoW
+   Forever", and no errors.
+3. **Uncached gear:** link an item you've never seen in chat. The level appears once it's loaded,
+   and nothing errors in the meantime.
+4. **Sources:** shift-click a piece of dungeon gear into `/jtt source ` (e.g. `/jtt source [item]`).
+   Every source is listed with "from ..." and how far to trust it, the drops with their Classic 1.12
+   chance. The tooltip itself shows the usual three lines, with no provenance.
+5. **Units:** players and NPCs as before (class colours, reaction borders, ">> You <<").
+6. With another tooltip addon that shows item level or a target line (if you use one), neither
+   appears twice.

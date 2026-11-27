@@ -10,7 +10,8 @@ Status labels:
 - **Unsupported**: not available, or not used.
 
 Every call whose answer can be hidden goes through `ns.Safe` (1.6.0): missing, erroring or secret
-values become nil.
+values become nil. Since 1.8.0, each information category lists the functions it needs
+(`Facts.CATEGORIES`); `/jtt info` shows which this client lacks.
 
 ## Tooltip system
 
@@ -46,7 +47,7 @@ values become nil.
 | API | Returns used | Status |
 |---|---|---|
 | `C_Item.GetItemInfo(link)` (older: `GetItemInfo`) | 4th item level (the base level), 9th equip location ("" if it can't be equipped), 12th class ID; nil while uncached or unknown | Verified in WoW Forever (Equip This!'s engine reads the same positions); Verified by documentation (warcraft.wiki.gg, API C_Item.GetItemInfo) |
-| `C_Item.GetItemInfoInstant(item)` → itemID, itemType, itemSubType, itemEquipLoc, icon, classID, subClassID (no cache needed) | not used yet; for M3 (an item's kind before its data arrives) | Verified by documentation (warcraft.wiki.gg); Verified in WoW Forever through Equip This!'s engine |
+| `C_Item.GetItemInfoInstant(item)` → itemID, itemType, itemSubType, itemEquipLoc, icon, classID, subClassID (no cache needed) | (1.8.0) an item's kind before its data arrives (`Facts.Item`) | Verified by documentation (warcraft.wiki.gg); Verified in WoW Forever through Equip This!'s engine |
 | `C_Item.GetItemQualityByID(link)` | quality border | Verified in WoW Forever |
 | `ITEM_QUALITY_COLORS` | quality border | Verified in WoW Forever |
 

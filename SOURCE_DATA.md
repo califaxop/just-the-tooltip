@@ -60,5 +60,8 @@ The tables are `items`, `npcs`, `quests`, `objects`, `instances` and `skills`.
 - Items new since the build only show sources once Questie is installed and ready (1.6.0: asked
   again until it is).
 - Zone names come from the game; a zone it doesn't name is shown without one.
-- Provenance and confidence per line are planned for Milestone 3. Ordinary tooltips stay clean,
-  with the detail available in a diagnostics view.
+- Provenance (1.8.0): every line knows where it came from (JTT's data, Questie in game, NeedRoll in
+  game) and how far to trust it (database; database for your faction; the client's tables;
+  NeedRoll's newer loot tables; drops "listed by Classic 1.12 drop chance (not Forever's)").
+  Ordinary tooltips stay clean; `/jtt source <item>` shows it all, the Classic chance included
+  (labelled as Classic's).

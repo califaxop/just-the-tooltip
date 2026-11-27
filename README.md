@@ -28,6 +28,8 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 | `/jtt move` | Drag your own tooltip spot (right-click the box when done) |
 | `/jtt reset` | Tooltips back at the game's spot |
 | `/jtt debug` | What the tooltip is doing right now |
+| `/jtt info` | Each kind of information: on or off, available on this client, how far it's verified, any errors |
+| `/jtt source <item>` | Every source known for an item (shift-click it in), where it was learned and how far to trust it |
 | `/jtt compat` | Other tooltip addons, and whether anything moves tooltips after Just the Tooltip! places them |
 | `/jtt report` | Bugs & Feedback: the form's link and a line to paste into it |
 
@@ -41,6 +43,7 @@ New versions come out every **Wednesday at 12:00 UTC** (8 PM Philippine time, 8 
 Found a bug, have feedback or want a feature? Click **Bugs & Feedback** at the top right of the settings window (or type `/jtt report`): it gives you the form's link and, for a bug, a line to paste into it with everything we need. Or [open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose) directly: there's a short form for each.
 
 ## Recent changes
+- **1.8.0 (test build):** Each tooltip's details are read once and shared, and each kind of information works on its own: one error no longer affects the rest (new `/jtt info`). An item level or target line another addon already shows isn't repeated. New `/jtt source <item>`: every source for an item, where it was learned and how far to trust it.
 - **1.7.0 (test build):** Each tooltip starts afresh (nothing carries over from the one before). A tooltip shown for a frame you're not over stays up; one whose frame hides goes with it. Blizzard's look restores the border exactly as it was. Comparison tooltips made later get JTT's look. New `/jtt compat` shows what other tooltip addons do alongside JTT.
 - **1.6.0 (test build):** Fixed: a Spell or Item ID could be left out when the tooltip showed a longer number containing it. Fixed: following the cursor, the tooltip's distance from it changed with its size; now it's the distance you set at any size. Fixed: a unit detail the game hides could stop the target line and colours. Fixed: hovering new gear right after login could stop Questie's sources for the session.
 - **1.5.0:** "Bugs & Feedback" now sits at the top right of the settings window, next to the ×. It opens a window (like Questie's trace export) with the form's link to copy at the top, for bug reports, feedback and feature requests, and for a bug, one line to paste into the form with your version, the game client, its settings and what the tooltip is doing right now; never your name, realm or guild. Also `/jtt report`. The settings window is now solid and comes to the front when opened or clicked: with several addons' settings open, they no longer show through each other.

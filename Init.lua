@@ -100,6 +100,12 @@ SlashCmdList.JUSTTHETOOLTIP = function(msg)
     ns.db.anchor = "custom"; ns.Anchor.Unlock(not ns.Anchor.unlocked)
   elseif cmd == "debug" then
     ns.Anchor.Debug()
+  elseif cmd == "info" then
+    for _, l in ipairs(ns.Facts.InfoLines()) do ns.Print(l) end
+  elseif cmd == "source" or cmd == "sources" then
+    local rest = (msg or ""):match("^%s*%S+%s*(.-)%s*$") or ""
+    local id = tonumber(rest:match("item:(%d+)")) or tonumber(rest)
+    for _, l in ipairs(ns.Sources.Explain(id)) do ns.Print(l) end
   elseif cmd == "compat" then
     for _, l in ipairs(ns.CompatLines()) do ns.Print(l) end
   elseif cmd == "report" then
