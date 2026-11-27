@@ -27,7 +27,8 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 | `/jtt` (or `/justthetooltip`) | Open settings |
 | `/jtt move` | Drag your own tooltip spot (right-click the box when done) |
 | `/jtt reset` | Tooltips back at the game's spot |
-| `/jtt debug` | What the tooltip is doing right now (handy for bug reports) |
+| `/jtt debug` | What the tooltip is doing right now |
+| `/jtt report` | Bugs & Feedback: the form's link and a line to paste into it |
 
 ## Good to know
 - Only tooltips the game would put in the bottom-right corner move. Tooltips that open beside your bags or a window stay next to them.
@@ -36,7 +37,7 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 New versions come out every **Wednesday at 12:00 UTC** (8 PM Philippine time, 8 AM US Eastern). Urgent fixes ship sooner.
 
 ## Feedback
-Found a bug or have an idea? [Open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose): there's a short form for each. The settings window has a "Report a bug / suggest" button with this link too.
+Found a bug, have feedback or want a feature? Click **Bugs & Feedback** at the top right of the settings window (or type `/jtt report`): it gives you the form's link and, for a bug, a line to paste into it with everything we need. Or [open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose) directly: there's a short form for each.
 
 ## Recent changes
 - **1.5.0:** "Bugs & Feedback" now sits at the top right of the settings window, next to the ×. It opens a window (like Questie's trace export) with the form's link to copy at the top, for bug reports, feedback and feature requests, and for a bug, one line to paste into the form with your version, the game client, its settings and what the tooltip is doing right now; never your name, realm or guild. Also `/jtt report`. The settings window is now solid and comes to the front when opened or clicked: with several addons' settings open, they no longer show through each other.
