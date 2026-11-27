@@ -10,7 +10,7 @@ before that.
 |---|---|---|---|
 | Quest rewards, creature drops, vendors, objects (chests), with names, levels, zones, factions | [QuestieDB](https://github.com/Questie/QuestieDB), `data/Forever` (WoW: Forever) | GPL v3 | Forever's database as the Questie team keeps it |
 | Which profession makes an item; which items are gear | the game client's own tables (SkillLineAbility, SpellEffect, Item), via [wago.tools](https://wago.tools), product `wowf` | game data | the client's |
-| Drop order (likeliest first) | [CMaNGOS Classic-DB](https://github.com/cmangos/classic-db), Classic 1.12 loot tables | GPL v3 | **Classic 1.12's rates, not Forever's**: used only to order drops; the chances are never shown |
+| Drop order (likeliest first) | [CMaNGOS Classic-DB](https://github.com/cmangos/classic-db), Classic 1.12 loot tables | GPL v3 | **Classic 1.12's rates, not Forever's**: used to order drops; the chances are never shown on tooltips (`/jtt source` shows them, labelled as Classic's) |
 | Items missing from the data (new since it was built) | Questie in game, if installed and ready | — | as Questie's |
 | Newer dungeon and raid drops and dungeon quests | NeedRoll in game, if installed | — | NeedRoll's loot tables |
 
@@ -54,7 +54,8 @@ The tables are `items`, `npcs`, `quests`, `objects`, `instances` and `skills`.
 ## Limitations
 
 - Drop order follows Classic 1.12's loot tables, which may differ on Forever. That's why chances
-  are never shown, and why NeedRoll's newer dungeon lines replace JTT's where it has them.
+  are never shown on tooltips (only in `/jtt source`, labelled as Classic's), and why NeedRoll's
+  newer dungeon lines replace JTT's where it has them.
 - Quests and vendors are filtered to your faction. Chests marked for the other faction are left
   out.
 - Items new since the build only show sources once Questie is installed and ready (1.6.0: asked
