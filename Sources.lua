@@ -15,15 +15,21 @@ local WHITE, GREY, GOLD = "|cffffffff", "|cff9d9d9d", "|cffffd100"
 local MAX_LINES = 3 -- the rest: "+N more sources"
 local RANK = { [1] = "Elite", [2] = "Rare Elite", [3] = "Boss", [4] = "Rare" }
 
+-- The companion's data, loaded the first time it's needed. Tried once a session: a load the game
+-- refuses (disabled, missing, out of date) stays refused until a reload. Why is kept for /jtt debug.
 local data, tried
+S.loadState = "not asked yet"
 local function Data()
   if data or tried then return data end
   tried = true
   if type(JustTheTooltipSources) ~= "table" then
     local load = (C_AddOns and C_AddOns.LoadAddOn) or LoadAddOn
-    if load then pcall(load, "JustTheTooltip_Sources") end
+    local ok, loaded, reason = false, nil, nil
+    if load then ok, loaded, reason = pcall(load, "JustTheTooltip_Sources") end
+    if not (ok and loaded) then S.loadState = "not loaded (" .. tostring(ok and reason or (load and "error" or "no LoadAddOn")) .. ")" end
   end
   data = type(JustTheTooltipSources) == "table" and JustTheTooltipSources or nil
+  if data then S.loadState = "loaded" end
   return data
 end
 -- installed (and not disabled): for the option's note
@@ -203,21 +209,39 @@ end
 
 -- Items our data doesn't have yet (new since it was built): asked of Questie, if it's installed, in
 -- the same form (its database is where ours comes from).
+-- (1.6.0) Questie's state, asked each time until it's settled, so nothing that's only true for a
+-- moment is kept for the session:
+--   "absent"    not loaded (maybe later: asked again)
+--   "loading"   loaded, its database not ready yet (asked again; nothing about any item is kept)
+--   "ready"     its item lookup works
+--   "unusable"  ready by its own word, but without the item lookup (kept: it won't change)
+-- Questie 12.9 and later bind QueryItemSingle as QuestieDB loads and say when they're ready
+-- (Questie.API.isReady, verified by source); older ones bound it while starting up, which is why a
+-- missing lookup only counts once Questie says it's ready.
 local QDB
--- Questie's database once Questie says it's ready (its API), or once its quest list exists
-local function QuestieReady()
-  local api = type(Questie) == "table" and Questie.API
-  if api and api.isReady ~= nil then return api.isReady and true or false end
-  return QDB and QDB.QuestPointers ~= nil or false
+local function ApiReady()
+  local api = type(Questie) == "table" and type(Questie.API) == "table" and Questie.API
+  if api and api.isReady ~= nil then return api.isReady == true end
+  return nil -- (no API: an older Questie; see below)
+end
+function S.QuestieState()
+  if QDB == false then return "unusable" end
+  if not QDB then
+    if not (QuestieLoader and type(QuestieLoader.ImportModule) == "function") then return "absent" end
+    local ok, db = pcall(QuestieLoader.ImportModule, QuestieLoader, "QuestieDB")
+    if ok and type(db) == "table" and type(db.QueryItemSingle) == "function" then
+      QDB = db
+    else
+      if ApiReady() == true then QDB = false; return "unusable" end
+      return "loading"
+    end
+  end
+  local ready = ApiReady()
+  if ready == nil then ready = QDB.QuestPointers ~= nil end -- (no API: once its quest list exists)
+  return ready and "ready" or "loading"
 end
 local function QuestieDB()
-  if QDB == nil then
-    if not (QuestieLoader and QuestieLoader.ImportModule) then return nil end -- (not loaded: ask later)
-    local ok, db = pcall(QuestieLoader.ImportModule, QuestieLoader, "QuestieDB")
-    QDB = ok and type(db) == "table" and db.QueryItemSingle and db or false
-  end
-  if QDB and not QuestieReady() then return nil end
-  return QDB or nil
+  return S.QuestieState() == "ready" and QDB or nil
 end
 local function Ask(fn, id, key)
   if not fn then return nil end
@@ -289,7 +313,11 @@ local function FromQuestie(id)
   return d, table.concat(parts, ";")
 end
 
+-- An item's lines, kept for the session once they're final: from our data, or from Questie once
+-- it's ready (an item it doesn't know is final then too). While Questie is absent or loading,
+-- nothing is kept, so its answer is used as soon as there is one.
 local cache = {}
+S.cache = cache -- (for checks)
 local function Lines(id)
   if cache[id] then return cache[id][1], cache[id][2] end
   local d = Data()
@@ -297,7 +325,8 @@ local function Lines(id)
   if not entry then
     local qd, qentry = FromQuestie(id)
     if not qd then
-      if QDB == nil or (QDB and not QuestieReady()) then return {}, {} end -- (Questie not ready yet: ask again next time)
+      local state = S.QuestieState()
+      if state == "absent" or state == "loading" then return {}, {} end -- (ask again next time)
       cache[id] = { {}, {} }; return cache[id][1], cache[id][2]
     end
     d, entry = qd, qentry

@@ -8,6 +8,27 @@ ns.isSecret = issecretvalue or function() return false end
 function ns.Readable(v) return v ~= nil and not ns.isSecret(v) end
 function ns.Print(...) print("|cff7fd6ffJust the Tooltip!:|r", ...) end
 
+-- A game call that can't break the tooltip (1.6.0): missing, erroring, or answering with a secret
+-- (the game can hide a unit's details from addons), each value comes back as nil. One unit detail
+-- that can't be read never stops the rest of the tooltip.
+local function Pack(...) return { n = select("#", ...), ... } end
+function ns.Safe(fn, ...)
+  if type(fn) ~= "function" then return nil end
+  local r = Pack(pcall(fn, ...))
+  if not r[1] then return nil end
+  for i = 2, r.n do if not ns.Readable(r[i]) then r[i] = nil end end
+  return unpack(r, 2, r.n)
+end
+
+-- Hooks are installed once (1.6.0): ns.Once("anchor") is true the first time only, so starting up
+-- again can never add a second copy of a hook. ns.hooks lists what's in (/jtt debug).
+ns.hooks = {}
+function ns.Once(key)
+  if ns.hooks[key] then return false end
+  ns.hooks[key] = true
+  return true
+end
+
 ns.DEFAULTS = {
   anchor = "default",     -- "default" (the game's spot), "cursor" (follows your mouse), "custom" (your own spot)
   scope = "all",          -- cursor: "all" (everything that uses the default spot) or "world" (units and objects in the world)
@@ -23,8 +44,8 @@ ns.DEFAULTS = {
   sources = true,         -- where gear comes from (needs the Just the Tooltip!: Sources addon, which ships with it)
   target = true,          -- "Target: Name" on units
   healthBar = true,       -- the health bar under unit tooltips
-  combatHide = false,
-  instantHide = true,     -- world tooltips vanish when you stop hovering (no fade)     -- hide tooltips for things in the world during combat (Shift shows them)
+  combatHide = false,     -- hide tooltips for things in the world during combat (Shift shows them)
+  instantHide = true,     -- world tooltips vanish when you stop hovering (no fade)
 }
 
 local function Copy(v)

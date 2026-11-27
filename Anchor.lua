@@ -77,15 +77,30 @@ local function OverInterface()
   return focus, named
 end
 
+-- Where the tooltip goes for the cursor at screen position x, y (GetCursorPosition's units). A
+-- point's offsets are in the scale of the frame being placed (the tooltip), so the cursor's
+-- position is divided by the tooltip's effective scale: its corner sits on the cursor at any
+-- tooltip or UI scale (verified by source: What's Training places its Forever menu the same way).
+-- The distance from the cursor is in the interface's units (UIParent's, like the sliders' "px"),
+-- so it's the same at any tooltip size (1.6.0: before, it grew and shrank with the tooltip).
+-- Returns the tooltip's point and its offsets from UIParent's bottom left.
+function A.CursorPoint(x, y, tipScale, uiScale, corner, offX, offY)
+  local c = CORNERS[corner] or CORNERS.BOTTOMRIGHT
+  local k = uiScale / tipScale
+  return c[1], x / tipScale + c[2] * offX * k, y / tipScale + c[3] * offY * k
+end
+
+local lastScale
 local function FollowCursor(force)
   local tip = GameTooltip
   local x, y = GetCursorPosition()
-  if not force and x == lastX and y == lastY then return end -- the mouse didn't move: nothing to do
-  lastX, lastY = x, y
-  local c = CORNERS[ns.db.corner] or CORNERS.BOTTOMRIGHT
   local s = tip:GetEffectiveScale()
+  -- the mouse didn't move (and the tooltip's size didn't change): nothing to do
+  if not force and x == lastX and y == lastY and s == lastScale then return end
+  lastX, lastY, lastScale = x, y, s
+  local point, px, py = A.CursorPoint(x, y, s, UIParent:GetEffectiveScale(), ns.db.corner, ns.db.offX, ns.db.offY)
   if force then tip:ClearAllPoints() end
-  tip:SetPoint(c[1], UIParent, "BOTTOMLEFT", x / s + c[2] * ns.db.offX, y / s + c[3] * ns.db.offY)
+  tip:SetPoint(point, UIParent, "BOTTOMLEFT", px, py)
 end
 
 local function Stop() following, watching, owner, thingWatch = false, false, nil, false; driver:Hide() end
@@ -291,6 +306,7 @@ end
 
 function A.Hook()
   A.PlaceSpot()
+  if not ns.Once("anchor") then return end
   if hooksecurefunc and GameTooltip_SetDefaultAnchor then
     hooksecurefunc("GameTooltip_SetDefaultAnchor", OnDefaultAnchor)
   end

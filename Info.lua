@@ -7,18 +7,37 @@ local Readable = ns.Readable
 
 local GREY, GOLD = "|cff9d9d9d", "|cffffd200"
 
+-- a tooltip line's text, or nil (no such line, an error, a secret, or empty)
+local function LineText(name, side, i)
+  local fs = _G[name .. "Text" .. side .. i]
+  if not (fs and fs.GetText) then return nil end
+  local ok, t = pcall(fs.GetText, fs)
+  if ok and Readable(t) and type(t) == "string" and t ~= "" then return t end
+end
+
+-- Is this line an ID line naming `id`? (1.6.0) The label is matched loosely, since addons write it
+-- their own way ("Item ID: 123", "ItemID 123", "ID: 123", "Spell ID" with the number on the
+-- right), but the number must be the whole of one: Item ID 1234 isn't ID 123. Colours and icons
+-- are taken out first (their codes have digits in them).
+local function Plain(t) return (t:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", ""):gsub("|A.-|a", "")) end
+function I.NamesID(left, right, id)
+  if type(left) ~= "string" or type(id) ~= "number" then return false end
+  local label = Plain(left):lower()
+  if not (label:find("%f[%a]id%f[%A]") or label:find("itemid", 1, true) or label:find("spellid", 1, true)) then return false end
+  local all = label .. " " .. (type(right) == "string" and Plain(right) or "")
+  for n in all:gmatch("%d+") do
+    if tonumber(n) == id then return true end
+  end
+  return false
+end
+
 -- another addon (or the game) may already show the ID: don't add it twice
 local function HasID(tip, id)
-  local name = tip:GetName()
-  if not name then return false end
-  local want = tostring(id)
-  for i = 2, tip:NumLines() do
-    local fs = _G[name .. "TextLeft" .. i]
-    local t = fs and fs:GetText()
-    if Readable(t) and t:find("ID") and t:find(want, 1, true) then return true end
-    fs = _G[name .. "TextRight" .. i]
-    t = fs and fs:GetText()
-    if Readable(t) and t:find(want, 1, true) and (_G[name .. "TextLeft" .. i]:GetText() or ""):find("ID") then return true end
+  local name = tip.GetName and tip:GetName()
+  if type(name) ~= "string" then return false end
+  local ok, n = pcall(tip.NumLines, tip)
+  for i = 2, (ok and type(n) == "number") and n or 0 do
+    if I.NamesID(LineText(name, "Left", i), LineText(name, "Right", i), id) then return true end
   end
   return false
 end
@@ -41,16 +60,24 @@ local function ItemLink(tip, data)
   end
 end
 
+-- The item level to show, or nil: gear only, by what the item is (weapons, class 2; armor, class
+-- 4) and where it's worn, never by its level alone. (GetItemInfo's returns, in order: name, link,
+-- quality, item level, required level, type, subtype, stack size, equip location, icon, sell
+-- price, class ID, subclass ID...: the positions Equip This! reads too, verified in WoW: Forever.)
+local NOT_WORN = { [""] = true, INVTYPE_NON_EQUIP = true, INVTYPE_NON_EQUIP_IGNORE = true, INVTYPE_BAG = true, INVTYPE_QUIVER = true }
+function I.GearLevel(level, equipLoc, classID)
+  if type(level) ~= "number" or level <= 1 then return nil end
+  if classID ~= 2 and classID ~= 4 then return nil end
+  if type(equipLoc) ~= "string" or NOT_WORN[equipLoc] then return nil end
+  return level
+end
+
 local function ItemLevel(tip, link)
   if not ns.db.itemLevel then return end
-  local getInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
-  if not getInfo then return end
-  local ok, _, _, _, level, _, _, _, _, equipLoc, _, _, classID = pcall(getInfo, link)
-  if not ok or not Readable(level) or type(level) ~= "number" or level <= 1 then return end
-  -- gear only (weapons 2, armor 4): bags, food and the like don't need one
-  if classID ~= 2 and classID ~= 4 then return end
-  if not equipLoc or equipLoc == "" or equipLoc == "INVTYPE_NON_EQUIP_IGNORE" then return end
-  tip:AddLine(GOLD .. "Item level " .. level .. "|r")
+  -- (not loaded yet: nothing now; the game shows the tooltip again once the item's data arrives)
+  local _, _, _, level, _, _, _, _, equipLoc, _, _, classID = ns.Safe(C_Item and C_Item.GetItemInfo or GetItemInfo, link)
+  level = I.GearLevel(level, equipLoc, classID)
+  if level then tip:AddLine(GOLD .. "Item level " .. level .. "|r") end
 end
 
 function I.OnItem(tip, data)
@@ -71,28 +98,25 @@ end
 ---------------------------------------------------------------------------
 -- Units
 ---------------------------------------------------------------------------
+-- (unit details through ns.Safe, 1.6.0: one that can't be read leaves the rest of the tooltip be)
+local Safe = ns.Safe
 local function UnitOf(tip)
   if not tip.GetUnit then return nil end
-  local ok, _, unit = pcall(tip.GetUnit, tip)
-  if ok and Readable(unit) and type(unit) == "string" then return unit end
+  local _, unit = Safe(tip.GetUnit, tip)
+  if type(unit) == "string" then return unit end
   -- (the game can keep who's under the mouse secret: then there's no unit to name)
-  local okE, exists = false, nil
-  if UnitExists then okE, exists = pcall(UnitExists, "mouseover") end
-  if okE and Readable(exists) and exists then return "mouseover" end
+  if Safe(UnitExists, "mouseover") == true then return "mouseover" end
 end
 
 local function NameColor(unit)
-  local okP, isPlayer = pcall(UnitIsPlayer, unit)
-  if okP and Readable(isPlayer) and isPlayer then
-    local _, class = UnitClass(unit)
-    local c = Readable(class) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+  if Safe(UnitIsPlayer, unit) == true then
+    local _, class = Safe(UnitClass, unit)
+    local c = type(class) == "string" and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
     if c then return format("|cff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255) end
   end
-  if UnitReaction then
-    local r = UnitReaction(unit, "player")
-    if Readable(r) and r then
-      if r <= 3 then return "|cffff4040" elseif r == 4 then return "|cffffff40" else return "|cff40ff40" end
-    end
+  local r = Safe(UnitReaction, unit, "player")
+  if type(r) == "number" then
+    if r <= 3 then return "|cffff4040" elseif r == 4 then return "|cffffff40" else return "|cff40ff40" end
   end
   return "|cffffffff"
 end
@@ -100,13 +124,12 @@ end
 local function AddTarget(tip, unit)
   if not ns.db.target then return end
   local t = unit .. "target"
-  local okE, exists = pcall(UnitExists, t)
-  if not (okE and Readable(exists) and exists) then return end
-  local isMe = UnitIsUnit(t, "player")
-  if not Readable(isMe) then return end
+  if Safe(UnitExists, t) ~= true then return end
+  local isMe = Safe(UnitIsUnit, t, "player")
+  if isMe == nil then return end -- (can't tell who it is: no line rather than a wrong one)
   if isMe then tip:AddLine("Target: |cffff4040>> You <<|r"); return end
-  local name = UnitName(t)
-  if not Readable(name) or not name then return end
+  local name = Safe(UnitName, t)
+  if type(name) ~= "string" or name == "" then return end
   tip:AddLine("Target: " .. NameColor(t) .. name .. "|r")
 end
 
@@ -142,6 +165,7 @@ end
 
 function I.Hook()
   if not (TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType) then return end
+  if not ns.Once("info") then return end
   local T = Enum.TooltipDataType
   local function on(kind, fn)
     if kind == nil then return end

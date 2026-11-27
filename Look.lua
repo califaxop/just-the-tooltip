@@ -3,7 +3,7 @@
 local _, ns = ...
 local L = {}
 ns.Look = L
-local Readable = ns.Readable
+local Safe = ns.Safe
 
 local skins = {}
 L.skins = skins -- (for checks)
@@ -64,22 +64,19 @@ L.Paint = Paint
 
 -- the border color for what the tooltip shows (nil = the style's own)
 local function QualityColor(link)
-  local q
-  if C_Item and C_Item.GetItemQualityByID then
-    local ok, v = pcall(C_Item.GetItemQualityByID, link)
-    if ok then q = v end
-  end
-  if not Readable(q) or q < 2 then return nil end -- grey / white items keep the plain border
+  local q = Safe(C_Item and C_Item.GetItemQualityByID, link)
+  if type(q) ~= "number" or q < 2 then return nil end -- grey / white items keep the plain border
   local c = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[q]
   if c then return c.r, c.g, c.b end
 end
 
+-- (unit details through ns.Safe, 1.6.0: unreadable ones give no colour, never an error)
 local function ClassColor(unit)
-  if not (unit and UnitIsPlayer and UnitIsPlayer(unit)) then return nil end
-  local _, class = UnitClass(unit)
-  local c = Readable(class) and (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class)
-    or RAID_CLASS_COLORS and RAID_CLASS_COLORS[class])
-  if c then return c.r, c.g, c.b end
+  if not unit or Safe(UnitIsPlayer, unit) ~= true then return nil end
+  local _, class = Safe(UnitClass, unit)
+  if type(class) ~= "string" then return nil end
+  local c = Safe(C_ClassColor and C_ClassColor.GetClassColor, class) or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class])
+  if type(c) == "table" and type(c.r) == "number" then return c.r, c.g, c.b end
 end
 
 L.stamp = 0
@@ -99,13 +96,10 @@ local REACTION = {
   hostile = { 0.95, 0.20, 0.20 }, neutral = { 1.00, 0.85, 0.10 }, friendly = { 0.20, 0.85, 0.25 }, tapped = { 0.55, 0.55, 0.55 },
 }
 local function ReactionColor(unit)
-  if not (ns.db.colorNPC and unit) or (UnitIsPlayer and UnitIsPlayer(unit)) then return nil end
-  if UnitIsTapDenied then
-    local ok, tapped = pcall(UnitIsTapDenied, unit)
-    if ok and Readable(tapped) and tapped then return unpack(REACTION.tapped) end
-  end
-  local ok, r = pcall(UnitReaction, unit, "player")
-  if not (ok and Readable(r) and type(r) == "number") then return nil end
+  if not (ns.db.colorNPC and unit) or Safe(UnitIsPlayer, unit) ~= false then return nil end -- (players, or can't tell)
+  if Safe(UnitIsTapDenied, unit) == true then return unpack(REACTION.tapped) end
+  local r = Safe(UnitReaction, unit, "player")
+  if type(r) ~= "number" then return nil end
   local c = r <= 3 and REACTION.hostile or r == 4 and REACTION.neutral or REACTION.friendly
   return c[1], c[2], c[3]
 end
@@ -116,8 +110,9 @@ function L.OnUnit(tip, unit)
   local isPlayer = r ~= nil
   if not r then r, g, b = ReactionColor(unit) end
   SetColor(tip, r, g, b)
-  if isPlayer and ns.db.colorBorder then -- the player's name in their class color too
-    local line = _G[tip:GetName() .. "TextLeft1"]
+  local name = tip.GetName and tip:GetName()
+  if isPlayer and ns.db.colorBorder and type(name) == "string" then -- the player's name in their class color too
+    local line = _G[name .. "TextLeft1"]
     if line then line:SetTextColor(r, g, b) end
   end
   Paint(tip)
@@ -125,6 +120,7 @@ end
 
 -- every tooltip we touch: styled whenever it shows; its color forgotten when it's cleared
 function L.Hook()
+  if not ns.Once("look") then return end
   for _, tip in ipairs(ns.Tooltips()) do
     tip:HookScript("OnShow", Paint)
     pcall(tip.HookScript, tip, "OnTooltipCleared", function(t) colors[t] = nil end)
