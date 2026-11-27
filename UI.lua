@@ -465,7 +465,7 @@ function UI.SetHost(host)
   host:HookScript("OnHide", function() for _, p in ipairs(popups) do p:Hide() end end)
 end
 
--- A small button in a window's title bar, left of its ×: "Report a bug" on every settings window
+-- A small button in a window's title bar, left of its ×: "Bugs & Feedback" on every settings window
 function UI.HeaderButton(win, label, width, onClick)
   local b = UI.Button(win, label, width, onClick)
   b:SetHeight(20)
@@ -479,9 +479,9 @@ end
 -- cfg: { name, title, repo (".../issues/new"), version, included,
 --        build = function() return line, { { icon, label, value }, ... up to 6 } end }
 -- kind: "bug" (default) or "idea" (the ideas form's link; no line needed)
-local BUG_NOTE = "Open the link above in your browser (needs a GitHub account), say what happened, and paste the line below into \"Debug output\". "
-  .. "Please open this window again for each report: the line holds things as they are right now."
-local IDEA_NOTE = "Open the link above in your browser (needs a GitHub account) and tell us your idea. The line below isn't needed for an idea."
+local BUG_NOTE = "Found a bug? Open the link above in your browser (needs a GitHub account), say what happened and paste the line below into \"Debug output\" "
+  .. "(open this window again for each report). Feedback or a feature request? Click \"Feedback / feature request\" below."
+local IDEA_NOTE = "Feedback, an idea or a feature you'd like? Open the link above in your browser (needs a GitHub account) and tell us. The line below isn't needed for this."
 local function CopyBox(win, key)
   local e = UI.Edit(win, 540, { function() return win[key] or "" end, function() end })
   e:SetMaxLetters(0)
@@ -494,7 +494,7 @@ local reportWindows = {}
 function UI.ShowBugReport(cfg, kind)
   local w = reportWindows[cfg.name]
   if not w then
-    w = UI.Popup(cfg.name, 600, 330)
+    w = UI.Popup(cfg.name, 600, 342)
     reportWindows[cfg.name] = w
     local title = UI.Text(w, "title", cfg.title)
     title:SetPoint("TOP", 0, -16)
@@ -503,20 +503,20 @@ function UI.ShowBugReport(cfg, kind)
     w.note = UI.Text(w, "note", "")
     w.note:SetPoint("TOP", 0, -72); w.note:SetWidth(540); w.note:SetJustifyH("CENTER")
     w.lineBox = CopyBox(w, "line")
-    w.lineBox:SetPoint("TOP", 0, -120)
+    w.lineBox:SetPoint("TOP", 0, -132)
     w.stats = {}
     for i = 1, 6 do
       local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
       local icon = w:CreateTexture(nil, "ARTWORK")
       icon:SetSize(18, 18)
-      icon:SetPoint("TOPLEFT", 40 + col * 290, -158 - row * 24)
+      icon:SetPoint("TOPLEFT", 40 + col * 290, -170 - row * 24)
       local t = UI.Text(w, "line", "")
       t:SetPoint("LEFT", icon, "RIGHT", 8, 0)
       t:SetWidth(255); t:SetWordWrap(false) -- (cut short, never into the next column)
       w.stats[i] = { icon = icon, text = t }
     end
     w.inc = UI.Text(w, "note", "")
-    w.inc:SetPoint("TOP", 0, -236); w.inc:SetWidth(540); w.inc:SetJustifyH("CENTER")
+    w.inc:SetPoint("TOP", 0, -248); w.inc:SetWidth(540); w.inc:SetJustifyH("CENTER")
     w.kindBtn = UI.Button(w, "", 180, function() UI.ShowBugReport(w.cfg, w.kind == "bug" and "idea" or "bug") end)
     w.kindBtn:SetPoint("BOTTOMLEFT", 20, 16)
     local close = UI.Button(w, "Close", 110, function() w:Hide() end)
@@ -537,7 +537,7 @@ function UI.ShowBugReport(cfg, kind)
     st.icon:SetShown(v ~= nil); st.text:SetShown(v ~= nil)
     if v then st.icon:SetTexture(v[1]); st.text:SetText(v[2] .. ": |cffffd200" .. tostring(v[3]) .. "|r") end
   end
-  w.kindBtn.SetLabel(w.kind == "bug" and "Suggest an idea instead" or "Report a bug instead")
+  w.kindBtn.SetLabel(w.kind == "bug" and "Feedback / feature request" or "Report a bug instead")
   w:Place(); w:Show(); w:Raise()
   local focus = w.kind == "bug" and w.lineBox or w.urlBox
   focus:SetFocus(); focus:HighlightText()

@@ -143,7 +143,7 @@ local function BugReport()
     { "Interface\\Icons\\Ability_Warrior_BattleShout", "Hide in combat", yes(db.combatHide) },
   }
 end
-local BUG = { name = "JustTheTooltipReportWindow", title = "Just the Tooltip! Bug Report",
+local BUG = { name = "JustTheTooltipReportWindow", title = "Just the Tooltip! Bugs & Feedback",
   repo = "https://github.com/califaxop/just-the-tooltip/issues/new",
   included = "Included: Just the Tooltip!'s version, the game client, your class and level, its settings and what the tooltip is doing right now. Never: your name, realm, guild or other players.",
   build = BugReport }
@@ -158,7 +158,7 @@ function ns.OpenOptions()
     window = UI.Window("JustTheTooltipOptionsWindow", 522, 660)
     window:SetPoint("CENTER")
     UI.SetHost(window) -- pop-ups (the bug report) sit over this window
-    UI.HeaderButton(window, "Report a bug", 110, function() ns.ShowBugReport() end)
+    UI.HeaderButton(window, "Bugs & Feedback", 130, function() ns.ShowBugReport() end)
     local ok, e = pcall(BuildPanel, window)
     if not ok then window:Hide(); window = nil; ns.Print("settings failed: " .. tostring(e)); return end
     window:SetHeight(window.height or 660)
