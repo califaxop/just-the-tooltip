@@ -142,11 +142,11 @@ F.CATEGORIES = {
   { key = "look", name = "Look, borders and name colours", setting = "look", needs = {}, status = VERIFIED },
   -- (1.10.0)
   { key = "npcId", name = "NPC ID", setting = "npcIds", needs = { "UnitGUID" },
-    status = "Verified by documentation (warcraft.wiki.gg: GUID format unchanged in 1.60.1)" },
+    status = VERIFIED },
   { key = "itemValue", name = "How many you have, and what they sell for", setting = "itemValue",
-    needs = { "C_Item.GetItemCount|GetItemCount" }, status = "Verified by documentation (warcraft.wiki.gg)" },
+    needs = { "C_Item.GetItemCount|GetItemCount" }, status = VERIFIED },
   { key = "spellKnown", name = "Whether you know a spell (with the detail key)", setting = "detailKey",
-    needs = { "C_SpellBook.IsSpellKnown|IsPlayerSpell" }, status = "Verified by documentation (warcraft.wiki.gg)" },
+    needs = { "C_SpellBook.IsSpellKnown|IsPlayerSpell" }, status = VERIFIED },
 }
 local byKey = {}
 for _, c in ipairs(F.CATEGORIES) do byKey[c.key] = c end

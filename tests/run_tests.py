@@ -617,11 +617,11 @@ def _():
     assert(t:find("Item ID: 600", 1, true) and not t:find("more", 1, true), "held: " .. t)
     local n = 0 for _ in t:gmatch("%(JTT data%)") do n = n + 1 end
     assert(n == 5, "five tagged: " .. n)
-    -- sources the data only counts (it names up to 6): said so, held
+    -- sources the data only counts (it names up to 12): said so, held
     JustTheTooltipSources.items[601] = "d1,2,3,4,5+4"
     T:ClearLines(); T:AddLine("x")
     MOCK.Post(Enum.TooltipDataType.Item, T, { id = 601 })
-    assert(text():find("+4 more: 4 not named (Just the Tooltip! names up to 6 of each kind)", 1, true), text())
+    assert(text():find("+4 more: 4 not named (Just the Tooltip! names up to 12 of each kind)", 1, true), text())
     -- pressing the key over a shown tooltip shows it again (RefreshData)
     local refreshed = 0
     T.RefreshData = function() refreshed = refreshed + 1 end

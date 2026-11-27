@@ -401,3 +401,18 @@ lists what it needs, as M3's do.
    coordinates ("Westfall 52, 64"). Check one against the map.
 7. **More sources:** gear that said "+N more" in 1.9.0 names more now.
 8. `/jtt source` on a vendor item: the vendor with its zone and place.
+
+Results (1.10.0 test build):
+- 1, 2: "source data: loaded (format 2, game build 1.60.1.71139, made 2026-11-27)"; nine categories,
+  the three new "available".
+- 3: Lashtail Raptor: "NPC ID: 686" (UnitGUID's NPC ID part verified in WoW Forever).
+- 4: Sweet Nectar "You have 56 (sell for 28s)"; Silk Cloth "You have 198 (sell for 2g 97s)".
+- 5: Chain Heal (not yet learned at 44): "Not learned".
+- 6: Small Lustrous Pearl with Alt: "Battered Chest (Questie) Redridge Mountains 51, 57", "Solid Chest
+  (Questie) Wetlands 35, 28": places from Questie's spawns.
+- 7: the pearl and Silk Cloth (not gear: their sources come from Questie, not JTT's data) still
+  named 6 per kind, and the line said "up to 6": Questie's lookups kept 6 while the data went to
+  12. Now one number, `Sources.NAMED` = 12, for both, and the wording follows it. Recheck with gear,
+  or the pearl again.
+- 8: item 211527: Quest "This Must Be The Place" (Level 32) and Vendor "Rix Xizzix (Stranglethorn
+  Vale 29, 76)", both from Questie.

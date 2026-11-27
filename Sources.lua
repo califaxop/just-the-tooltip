@@ -20,6 +20,7 @@ local RANK = { [1] = "Elite", [2] = "Rare Elite", [3] = "Boss", [4] = "Rare" }
 local data, tried
 S.loadState = "not asked yet"
 S.FORMAT = 2 -- the data format this version reads (tools/sources/validate.py FORMAT)
+S.NAMED = 12 -- sources named per kind and item (the rest counted): the data's MAX_IDS, and Questie's here
 local function Data()
   if data or tried then return data end
   tried = true
@@ -333,7 +334,7 @@ local function FromQuestie(id)
       q[#q + 1] = id2
     end
   end
-  if #q > 0 then ids("q", q, 6) end
+  if #q > 0 then ids("q", q, S.NAMED) end
   local dr = {}
   for _, n in ipairs(drops) do if npc(n) then dr[#dr + 1] = n end end
   if #dr > 12 then -- (dropped by many creatures: a world drop)
@@ -343,10 +344,10 @@ local function FromQuestie(id)
       if a > 0 then lo = math.min(lo or a, a) end; hi = math.max(hi, b)
     end
     parts[#parts + 1] = format("w%d-%d", lo or 0, hi)
-  elseif #dr > 0 then ids("d", dr, 6) end
+  elseif #dr > 0 then ids("d", dr, S.NAMED) end
   local ve = {}
   for _, n in ipairs(vendors) do if npc(n) then ve[#ve + 1] = n end end
-  if #ve > 0 then ids("v", ve, 6) end
+  if #ve > 0 then ids("v", ve, S.NAMED) end
   local ob = {}
   for _, o in ipairs(objects) do
     local name = Ask(db.QueryObjectSingle, o, "name")
@@ -356,7 +357,7 @@ local function FromQuestie(id)
       d.objects[o] = table.concat({ name, zone, x, y }, "|"); ob[#ob + 1] = o
     end
   end
-  if #ob > 0 then ids("o", ob, 6) end
+  if #ob > 0 then ids("o", ob, S.NAMED) end
   if #parts == 0 then return nil end
   return d, table.concat(parts, ";")
 end
@@ -648,7 +649,7 @@ function S.Add(tip, id, detail)
     if detail then
       -- (1.9.0) every named source is shown: what's left is only counted where it came from
       local why = {}
-      if unnamedData > 0 then why[#why + 1] = format("%d not named (Just the Tooltip! names up to 6 of each kind)", unnamedData) end
+      if unnamedData > 0 then why[#why + 1] = format("%d not named (Just the Tooltip! names up to %d of each kind)", unnamedData, S.NAMED) end
       if unnamedNR > 0 then why[#why + 1] = format("%d NeedRoll counts but doesn't name (it names 3)", unnamedNR) end
       tip:AddLine("  " .. GREY .. format("+%d more: %s", more, table.concat(why, "; ")) .. "|r", nil, nil, nil, true)
     else

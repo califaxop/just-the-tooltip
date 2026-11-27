@@ -54,7 +54,7 @@ values become nil. Since 1.8.0, each information category lists the functions it
 | `C_Item.GetItemInfo(link)` (older: `GetItemInfo`) | 4th item level (the base level), 9th equip location ("" if it can't be equipped), 12th class ID; nil while uncached or unknown | Verified in WoW Forever (Equip This!'s engine reads the same positions); Verified by documentation (warcraft.wiki.gg, API C_Item.GetItemInfo) |
 | `C_Item.GetItemInfoInstant(item)` → itemID, itemType, itemSubType, itemEquipLoc, icon, classID, subClassID (no cache needed) | (1.8.0) an item's kind before its data arrives (`Facts.Item`) | Verified by documentation (warcraft.wiki.gg); Verified in WoW Forever through Equip This!'s engine |
 | `C_Item.GetItemQualityByID(link)` | quality border | Verified in WoW Forever |
-| `C_Item.GetItemCount(item, includeBank)` (else `GetItemCount`) | how many you have (1.10.0) | Verified by documentation (warcraft.wiki.gg). In-game check 4 |
+| `C_Item.GetItemCount(item, includeBank)` (else `GetItemCount`) | how many you have (1.10.0) | Verified in WoW Forever (1.10.0: 56 and 198, as in the bags) and by documentation (warcraft.wiki.gg) |
 | GetItemInfo's 8th (stack size) and 11th (sell price) | the value of what you have (1.10.0) | Verified by documentation (warcraft.wiki.gg) |
 | `ITEM_QUALITY_COLORS` | quality border | Verified in WoW Forever |
 
@@ -64,8 +64,8 @@ values become nil. Since 1.8.0, each information category lists the functions it
 |---|---|---|
 | `UnitExists`, `UnitIsPlayer`, `UnitClass` (2nd: class token), `UnitReaction(unit, "player")`, `UnitIsUnit`, `UnitName`, `UnitIsTapDenied` | target line, borders, name colour | In use and working: Verified in WoW Forever. Which of them the game hides, and when: Inferred (all handled as possibly secret) |
 | `C_ClassColor.GetClassColor(class)`, `RAID_CLASS_COLORS` | class colours | Verified by documentation; in use |
-| `UnitGUID(unit)` → "Creature-0-[server]-[instance]-[zone]-[npcID]-[spawn]" | NPC ID (1.10.0) | Verified by documentation (warcraft.wiki.gg: patch 1.60.1 scrambles the server and spawn parts; the format is unchanged). In-game check 3 (1.10.0) |
-| `C_SpellBook.IsSpellKnown(spellID)` (else `IsPlayerSpell(spellID)`, deprecated in 11.2) | whether you know a spell (1.10.0) | Verified by documentation (warcraft.wiki.gg). In-game check 5 |
+| `UnitGUID(unit)` → "Creature-0-[server]-[instance]-[zone]-[npcID]-[spawn]" | NPC ID (1.10.0) | Verified in WoW Forever (1.10.0: Lashtail Raptor, NPC ID 686) and by documentation (warcraft.wiki.gg: patch 1.60.1 scrambles the server and spawn parts; the format is unchanged) |
+| `C_SpellBook.IsSpellKnown(spellID)` (else `IsPlayerSpell(spellID)`, deprecated in 11.2) | whether you know a spell (1.10.0) | Verified in WoW Forever (1.10.0: "Not learned" on a spell not yet trained) and by documentation (warcraft.wiki.gg) |
 
 ## Other
 
