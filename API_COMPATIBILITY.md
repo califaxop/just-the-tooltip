@@ -27,6 +27,7 @@ values become nil. Since 1.8.0, each information category lists the functions it
 | `C_TooltipInfo.GetWorldCursor()` | is the mouse still over something in the world | Verified in WoW Forever (`/jtt trace`, 1.4.x) |
 | `UPDATE_MOUSEOVER_UNIT`, `WORLD_CURSOR_TOOLTIP_UPDATE(anchorType)`, `Enum.WorldCursorAnchorType.None` | world tooltips that stayed up | Verified in WoW Forever (`/jtt trace`) |
 | `GetMouseFoci()` (older: `GetMouseFocus()`) | the mouse moved onto the interface | Verified in WoW Forever |
+| `Frame:GetDebugName()` | `/jtt lifecycle`: an owner without a name (bag slots), and `/jtt trace` | In use since 1.4 (`/jtt trace`); read through `ns.Safe` |
 
 | `Frame:IsMouseOver()`, `Frame:IsVisible()` | owner watch (1.7.0: only after the mouse was over the frame; a hidden frame takes its tooltip) | IsMouseOver: Verified in WoW Forever (in use since 1.3). IsVisible on owners: Verified by documentation; in-game check 4 (1.7.0) |
 | `Region:GetPoint(1)` → point, relativeTo, ... | the placement check (`/jtt compat`) | Verified by documentation; in-game check 8 (1.7.0) |

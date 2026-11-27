@@ -51,7 +51,8 @@ local function Rec() local h = A.history; return h[#h] end
 local function Name(f)
   if f == nil then return "none" end
   if type(f) ~= "table" then return tostring(f) end
-  return ns.Safe(f.GetName, f) or "an unnamed frame"
+  -- (no name, as bag slots in this client: its place in the interface, e.g. "ContainerFrame1.Item3")
+  return ns.Safe(f.GetName, f) or ns.Safe(f.GetDebugName, f) or "an unnamed frame"
 end
 -- what ended the tooltip now showing (JTT's reason, set just before it hides it)
 function A.Ended(reason)
@@ -68,8 +69,13 @@ local function Fresh(_, owner, anchor)
   -- the one before still open: new content put in it (a button refreshing its own tooltip, or
   -- something else taking the tooltip over)
   local prev, name = h[#h], Name(owner)
-  if prev and not prev.ended and GameTooltip:IsShown() then
-    prev.ended, prev.endedAt = prev.owner == name and "refreshed by the same frame" or ("replaced (shown for " .. name .. ")"), GetTime()
+  if prev and not prev.ended then
+    if GameTooltip:IsShown() then
+      prev.ended = prev.owner == name and "refreshed by the same frame" or ("replaced (shown for " .. name .. ")")
+    else
+      prev.ended = "never shown (nothing to show)" -- (begun, but the game put nothing in it)
+    end
+    prev.endedAt = GetTime()
   end
   h[#h + 1] = { gen = S.gen, at = GetTime(), owner = name, anchor = type(anchor) == "string" and anchor or nil }
   if #h > HISTORY then table.remove(h, 1) end

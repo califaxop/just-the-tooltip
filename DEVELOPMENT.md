@@ -19,7 +19,7 @@ file holds the architecture, conventions, milestone plan and progress.
 | 3 | Information engine | Done in 1.8.0, verified in game, reviewed |
 | 4 | Customization and presentation | Done in 1.9.0, verified in game, reviewed |
 | 5 | Expanded information and source database | Done in 1.10.0, verified in game, reviewed |
-| 6 | Diagnostics and release | **Done in 2.0.0 (offline); in-game checks pending** |
+| 6 | Diagnostics and release | **Done in 2.0.0, verified in game; ready to ship** |
 
 Each milestone is reviewed before the next starts.
 
@@ -476,6 +476,11 @@ Results (2.0.0 release candidate):
 - 5: cursor at every size and corner: pass.
 - 7: `/jtt report` with the last tooltips (world objects closed by "the game started its fade
   (no fade: hidden at once)") and the API summary.
+- Recheck: 1 "refreshed by the same frame" shows (#79). Still "?: not seen ending" on #82-84:
+  tooltips begun (SetOwner) but never shown (the game had nothing for them), so neither a hide nor
+  an open tooltip ended them. Now "never shown (nothing to show)". Owners without a name (bag slots
+  in this client) are named by their place in the interface (GetDebugName). 6 (every tooltip type):
+  pass.
 - NeedRoll is v2.0.2 now (verified by source: v1.9.0). Its `tooltipSources` setting and its lines
   work as before (NeedRoll's lines shown JTT's way, `/jtt source` items 7720 and 7721).
 

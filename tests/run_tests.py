@@ -813,6 +813,13 @@ def _():
     T:SetOwner(MOCK.obj("ActionButton10", UIParent), "ANCHOR_NONE")
     assert(NS.Anchor.history[#NS.Anchor.history - 1].ended == "replaced (shown for ActionButton10)")
     T:Hide()
+    -- begun but never shown (nothing to show), then another
+    T:SetOwner(UIParent, "ANCHOR_NONE"); T:SetOwner(UIParent, "ANCHOR_NONE")
+    assert(NS.Anchor.history[#NS.Anchor.history - 1].ended == "never shown (nothing to show)")
+    -- no name: its place in the interface
+    local slot = MOCK.obj(nil, UIParent); slot.GetDebugName = function() return "ContainerFrame1.Item3" end
+    T:SetOwner(slot, "ANCHOR_NONE")
+    assert(NS.Anchor.history[#NS.Anchor.history].owner == "ContainerFrame1.Item3")
     for _ = 1, 30 do T:SetOwner(UIParent, "ANCHOR_NONE") end
     assert(#NS.Anchor.history == 20, "the last 20")
     PRINTS = {}
