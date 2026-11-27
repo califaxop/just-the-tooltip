@@ -31,15 +31,16 @@ values become nil.
 
 | API | Use | Status |
 |---|---|---|
-| `GetCursorPosition()` | the cursor, in screen units | Verified in WoW Forever |
-| `Region:SetPoint(point, relativeTo, relativePoint, x, y)`: offsets in the placed frame's scale | the cursor converted by the tooltip's own effective scale | Verified by source (What's Training's Forever menu: `x / menu:GetEffectiveScale()`). At 100%: Verified in WoW Forever. At other sizes: in-game check 2 (1.6.0) |
+| `GetCursorPosition()` | the cursor, "unaffected by UI scale" (divide by an effective scale to get offsets) | Verified in WoW Forever; Verified by documentation (warcraft.wiki.gg, API GetCursorPosition) |
+| `Region:SetPoint(point, relativeTo, relativePoint, x, y)`: offsets in the placed frame's scale | the cursor converted by the tooltip's own effective scale | Verified by documentation (warcraft.wiki.gg, ScriptRegionResizing:SetPoint: "UI scaling affects the distances for offsetX and offsetY; increasing the Region's scale will increase the offset") and by source (What's Training's Forever menu: `x / menu:GetEffectiveScale()`). At 100%: Verified in WoW Forever. At other sizes: in-game check 2 (1.6.0) |
 | `GetEffectiveScale()` (tooltip, UIParent) | the cursor conversion; the gap in interface units | as above |
 
 ## Items
 
 | API | Returns used | Status |
 |---|---|---|
-| `C_Item.GetItemInfo(link)` (older: `GetItemInfo`) | 4th item level, 9th equip location, 12th class ID; nil while uncached | Verified in WoW Forever (Equip This!'s engine reads the same positions) |
+| `C_Item.GetItemInfo(link)` (older: `GetItemInfo`) | 4th item level (the base level), 9th equip location ("" if it can't be equipped), 12th class ID; nil while uncached or unknown | Verified in WoW Forever (Equip This!'s engine reads the same positions); Verified by documentation (warcraft.wiki.gg, API C_Item.GetItemInfo) |
+| `C_Item.GetItemInfoInstant(item)` → itemID, itemType, itemSubType, itemEquipLoc, icon, classID, subClassID (no cache needed) | not used yet; for M3 (an item's kind before its data arrives) | Verified by documentation (warcraft.wiki.gg); Verified in WoW Forever through Equip This!'s engine |
 | `C_Item.GetItemQualityByID(link)` | quality border | Verified in WoW Forever |
 | `ITEM_QUALITY_COLORS` | quality border | Verified in WoW Forever |
 

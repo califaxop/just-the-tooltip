@@ -93,7 +93,7 @@ centralised in Milestone 2.
 - The return positions are correct: item level 4th, equip location 9th, class ID 12th (12
   returns: name, link, quality, item level, required level, type, subtype, stack size, equip
   location, icon, sell price, class ID). Equip This!'s engine reads the same positions, verified
-  in WoW: Forever.
+  in WoW: Forever, and warcraft.wiki.gg documents the same order (nil while the item isn't cached).
 - The investigation target ("incorrect positions") isn't a defect. The `pcall` result shifts every
   return by one, and the old code accounted for that.
 - Gear is decided by class (2 weapons, 4 armor) and equip location, never by level alone.
@@ -106,7 +106,9 @@ centralised in Milestone 2.
 - The point is `SetPoint(corner, UIParent, "BOTTOMLEFT", x / tooltipEffectiveScale, ...)`.
 - A point's offsets are in the scale of the frame being placed, not of the frame it's placed
   against. Dividing the cursor by the tooltip's own effective scale is therefore correct at any
-  tooltip or UI scale. Verified by source: What's Training places its Forever menu the same way.
+  tooltip or UI scale. Verified by documentation (warcraft.wiki.gg, SetPoint: "increasing the
+  Region's scale will increase the offset"; GetCursorPosition: "unaffected by UI scale") and by
+  source: What's Training places its Forever menu the same way.
   The investigation target ("should use UIParent's scale") would have been wrong at any size but
   100%.
 - The defect: the distance from the cursor was added in the tooltip's units, so it grew and shrank

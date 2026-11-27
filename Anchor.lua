@@ -80,7 +80,8 @@ end
 -- Where the tooltip goes for the cursor at screen position x, y (GetCursorPosition's units). A
 -- point's offsets are in the scale of the frame being placed (the tooltip), so the cursor's
 -- position is divided by the tooltip's effective scale: its corner sits on the cursor at any
--- tooltip or UI scale (verified by source: What's Training places its Forever menu the same way).
+-- tooltip or UI scale (warcraft.wiki.gg, SetPoint: "increasing the Region's scale will increase
+-- the offset"; What's Training places its Forever menu the same way).
 -- The distance from the cursor is in the interface's units (UIParent's, like the sliders' "px"),
 -- so it's the same at any tooltip size (1.6.0: before, it grew and shrank with the tooltip).
 -- Returns the tooltip's point and its offsets from UIParent's bottom left.
