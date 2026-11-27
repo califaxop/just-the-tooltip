@@ -19,6 +19,7 @@ local RANK = { [1] = "Elite", [2] = "Rare Elite", [3] = "Boss", [4] = "Rare" }
 -- refuses (disabled, missing, out of date) stays refused until a reload. Why is kept for /jtt debug.
 local data, tried
 S.loadState = "not asked yet"
+S.FORMAT = 2 -- the data format this version reads (tools/sources/validate.py FORMAT)
 local function Data()
   if data or tried then return data end
   tried = true
@@ -29,7 +30,13 @@ local function Data()
     if not (ok and loaded) then S.loadState = "not loaded (" .. tostring(ok and reason or (load and "error" or "no LoadAddOn")) .. ")" end
   end
   data = type(JustTheTooltipSources) == "table" and JustTheTooltipSources or nil
-  if data then S.loadState = "loaded" end
+  if data then
+    -- (1.10.0) which format it's in, what it was made from (format 1: before 1.10.0, without places)
+    local v = type(data.version) == "number" and data.version or 1
+    S.loadState = format("loaded (format %d%s%s)", v,
+      type(data.build) == "string" and (", game build " .. data.build) or "", type(data.made) == "string" and (", made " .. data.made) or "")
+    if v > S.FORMAT then S.loadState = S.loadState .. "; newer than this Just the Tooltip! reads: update it" end
+  end
   return data
 end
 -- installed (and not disabled): for the option's note
@@ -61,6 +68,12 @@ local function Split(s)
   for p in ((s or "") .. "|"):gmatch("(.-)|") do t[#t + 1] = p end
   return t
 end
+-- (1.10.0) a place in its zone from two fields (0-100), or nil (none known, or format 1 data)
+local function Place(x, y)
+  x, y = tonumber(x), tonumber(y)
+  if x and y and x > 0 and y > 0 and x <= 100 and y <= 100 then return x, y end
+end
+S.Place = Place
 local function Levels(a, b)
   a, b = tonumber(a) or 0, tonumber(b) or 0
   if a == 0 then return "" end
@@ -194,10 +207,11 @@ local function Build(d, entry, origin)
               local rank = RANK[rankN]
               local l = add(rankN == 3 and "Boss" or "Enemy", r[1] .. ((rank and rankN ~= 3) and (GREY .. " (" .. rank .. ")|r") or ""),
                 zone, 2, r[1], zone)
-              l.chance = chance[n]; if l.kind then l.trust = DropTrust(l.chance) end
+              l.chance = chance[n]; if l.kind then l.trust = DropTrust(l.chance); l.x, l.y = Place(r[7], r[8]) end
             end
           elseif not mine or (r[6] or ""):find(mine) then
-            add("Vendor", r[1], zone, 4, r[1], zone)
+            local l = add("Vendor", r[1], zone, 4, r[1], zone)
+            if l.kind then l.x, l.y = Place(r[7], r[8]) end
           end
         end
       end
@@ -211,7 +225,10 @@ local function Build(d, entry, origin)
         local r = Split(d.objects[o])
         -- (an "Alliance Chest" when you're Horde: not yours to open)
         local other = (mine == "A" and "^Horde ") or (mine == "H" and "^Alliance ") or nil
-        if r[1] and not (other and r[1]:find(other)) then add("Chest", r[1], Zone(r[2]), 7, r[1], Zone(r[2])) end
+        if r[1] and not (other and r[1]:find(other)) then
+          local l = add("Chest", r[1], Zone(r[2]), 7, r[1], Zone(r[2]))
+          if l.kind then l.x, l.y = Place(r[3], r[4]) end
+        end
       end
     elseif kind == "c" then
       local skill = tonumber(rest)
@@ -281,12 +298,20 @@ local function FromQuestie(id)
   if #quests + #drops + #vendors + #objects == 0 then return nil end
   local band = bit and bit.band
   local d = { quests = {}, npcs = {}, objects = {}, instances = (Data() or {}).instances }
+  -- (1.10.0) the first spawn in its zone, from Questie's { [zone] = { { x, y }, ... } } (0-100)
+  local function where(spawns, zone)
+    local pts = type(spawns) == "table" and spawns[tonumber(zone) or 0]
+    local p = type(pts) == "table" and pts[1]
+    if type(p) == "table" and Place(p[1], p[2]) then return format("%.0f", p[1]), format("%.0f", p[2]) end
+    return "", ""
+  end
   local function npc(n)
     local name = Ask(db.QueryNPCSingle, n, "name")
     if type(name) ~= "string" then return false end
+    local zone = Ask(db.QueryNPCSingle, n, "zoneID") or 0
+    local x, y = where(Ask(db.QueryNPCSingle, n, "spawns"), zone)
     d.npcs[n] = table.concat({ name, Ask(db.QueryNPCSingle, n, "minLevel") or 0, Ask(db.QueryNPCSingle, n, "maxLevel") or 0,
-      Ask(db.QueryNPCSingle, n, "rank") or 0, Ask(db.QueryNPCSingle, n, "zoneID") or 0,
-      Ask(db.QueryNPCSingle, n, "friendlyToFaction") or "" }, "|")
+      Ask(db.QueryNPCSingle, n, "rank") or 0, zone, Ask(db.QueryNPCSingle, n, "friendlyToFaction") or "", x, y }, "|")
     return true
   end
   local parts = {}
@@ -325,7 +350,11 @@ local function FromQuestie(id)
   local ob = {}
   for _, o in ipairs(objects) do
     local name = Ask(db.QueryObjectSingle, o, "name")
-    if type(name) == "string" then d.objects[o] = name .. "|" .. (Ask(db.QueryObjectSingle, o, "zoneID") or 0); ob[#ob + 1] = o end
+    if type(name) == "string" then
+      local zone = Ask(db.QueryObjectSingle, o, "zoneID") or 0
+      local x, y = where(Ask(db.QueryObjectSingle, o, "spawns"), zone)
+      d.objects[o] = table.concat({ name, zone, x, y }, "|"); ob[#ob + 1] = o
+    end
   end
   if #ob > 0 then ids("o", ob, 6) end
   if #parts == 0 then return nil end
@@ -458,6 +487,11 @@ local function FromNeedRoll(id)
   return res
 end
 
+-- the right side: level or zone; with the detail key, the place in the zone too ("Westfall 52, 64")
+local function Right(l, detail)
+  if detail and l.x then return format("%s%.0f, %.0f", l.right ~= "" and (l.right .. " ") or "", l.x, l.y) end
+  return l.right
+end
 -- /jtt source <item>: every source known for an item (not only the first three), each with where
 -- it came from and how far to trust it; NeedRoll's too while JTT shows them its way. Lines of text.
 function S.Explain(id)
@@ -487,7 +521,7 @@ function S.Explain(id)
     S.loadState, S.QuestieState())
   for _, l in ipairs(all) do
     local plain = (l.text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
-    L[#L + 1] = format("  %s: %s%s | from %s | %s%s%s", l.kind, plain, l.right ~= "" and (" (" .. l.right .. ")") or "",
+    L[#L + 1] = format("  %s: %s%s | from %s | %s%s%s", l.kind, plain, l.right ~= "" and (" (" .. Right(l, true) .. ")") or (l.x and (" (" .. Right(l, true) .. ")") or ""),
       l.from or "?", l.trust or "?", l.chance and format(" | Classic 1.12 chance %s%%", l.chance) or "",
       Replaced(l) and " | not on the tooltip: NeedRoll's newer line for this dungeon replaces it" or "")
   end
@@ -598,7 +632,7 @@ function S.Add(tip, id, detail)
   -- just one: on the heading line ("Source: [chest] Random chests and containers")
   if #show == 1 and more == 0 then
     local l = show[1]
-    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. (detail and Tag(l) or ""), GREY .. l.right .. "|r")
+    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. (detail and Tag(l) or ""), GREY .. Right(l, detail) .. "|r")
     return
   end
   -- "Source: Dungeon, Quest", then a line for each
@@ -608,7 +642,7 @@ function S.Add(tip, id, detail)
   end
   tip:AddLine(GOLD .. "Source:|r " .. WHITE .. (#kinds > 0 and table.concat(kinds, ", ") or "More") .. "|r")
   for _, l in ipairs(show) do
-    tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. (detail and Tag(l) or ""), GREY .. l.right .. "|r")
+    tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. (detail and Tag(l) or ""), GREY .. Right(l, detail) .. "|r")
   end
   if more > 0 then
     if detail then

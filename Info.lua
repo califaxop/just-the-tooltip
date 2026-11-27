@@ -92,6 +92,34 @@ local function ItemLevel(tip, it, detail)
   tip:AddLine(GOLD .. "Item level " .. level .. "|r")
 end
 
+-- money as text: "1g 20s 5c", in the game's coin colours
+local function Money(c)
+  c = math.floor(c or 0)
+  local g, si, co = math.floor(c / 10000), math.floor(c / 100) % 100, c % 100
+  local t = {}
+  if g > 0 then t[#t + 1] = g .. "|cffffd700g|r" end
+  if si > 0 then t[#t + 1] = si .. "|cffc7c7cfs|r" end
+  if co > 0 or #t == 0 then t[#t + 1] = co .. "|cffeda55fc|r" end
+  return table.concat(t, " ")
+end
+I.Money = Money
+
+-- (1.10.0) how many you have (bags, and the bank once you've opened it) and what they sell for
+-- together; with the detail key, "You have none" too
+function I.ValueText(count, sellPrice, detail)
+  if type(count) ~= "number" then return nil end
+  if count <= 0 then return detail and "You have none" or nil end
+  local t = "You have " .. count
+  if type(sellPrice) == "number" and sellPrice > 0 then t = t .. " (sell for " .. Money(sellPrice * count) .. ")" end
+  return t
+end
+local function ItemValue(tip, it, detail)
+  if not (ns.db.itemValue or detail) then return end
+  local t = I.ValueText(ns.Facts.Count(it.id), it.sellPrice, detail)
+  if not t or Says(tip, function(l) return l:find("^%s*you have") ~= nil end) then return end
+  tip:AddLine(GREY .. t .. "|r")
+end
+
 -- (1.8.0) The item's facts gathered once (Facts.lua) and handed to each category; each category
 -- runs on its own (Facts.Run), so one failing leaves the rest.
 -- (1.9.0) In the order chosen (ns.ItemOrder), on the tooltips chosen (ns.Shows: the game's,
@@ -101,6 +129,7 @@ local ITEM_LINE = {
   itemLevel = function(tip, it, detail) ItemLevel(tip, it, detail) end,
   sources = function(tip, it, detail) if ns.Sources then ns.Sources.Add(tip, it.id, detail) end end,
   itemId = function(tip, it, detail) AddID(tip, "Item ID", it.id, detail) end,
+  itemValue = ItemValue,
 }
 function I.OnItem(tip, data)
   local it = ns.Facts.Item(tip, data)
@@ -111,10 +140,19 @@ function I.OnItem(tip, data)
   Run("look", ns.Look.OnItem, tip, it)
 end
 
-function I.OnSpell(tip, data)
-  local detail = ns.Detail()
-  if detail or ns.Shows("spellId", tip) then Run("spellId", AddID, tip, "Spell ID", ns.Facts.Spell(data).id, detail) end
+-- (1.10.0) with the detail key, whether you know the spell (not on buffs and debuffs)
+local function Known(tip, id)
+  local k = ns.Facts.Known(id)
+  if k == nil or Says(tip, function(l) return l:find("you know this spell", 1, true) or l:find("not learned", 1, true) end) then return end
+  tip:AddLine(k and "|cff40ff40You know this spell|r" or (GREY .. "Not learned|r"))
 end
+function I.OnSpell(tip, data, aura)
+  local detail = ns.Detail()
+  local id = ns.Facts.Spell(data).id
+  if detail or ns.Shows("spellId", tip) then Run("spellId", AddID, tip, "Spell ID", id, detail) end
+  if detail and not aura then Run("spellKnown", Known, tip, id) end
+end
+function I.OnAura(tip, data) I.OnSpell(tip, data, true) end
 
 ---------------------------------------------------------------------------
 -- Units
@@ -158,6 +196,8 @@ function I.OnUnit(tip, data)
   local unit = UnitOf(tip)
   if not unit then return end
   Run("target", AddTarget, tip, unit)
+  -- (1.10.0) a creature's NPC ID (turned on, or with the detail key)
+  if ns.db.npcIds or ns.Detail() then Run("npcId", AddID, tip, "NPC ID", ns.Facts.NpcID(unit), true) end
   Run("look", ns.Look.OnUnit, tip, ns.Facts.Unit(unit))
 end
 
@@ -189,7 +229,7 @@ function I.Hook()
   end
   on(T.Item, I.OnItem)
   on(T.Spell, I.OnSpell)
-  on(T.UnitAura, I.OnSpell)   -- buffs and debuffs: their spell ID
+  on(T.UnitAura, I.OnAura)    -- buffs and debuffs: their spell ID
   on(T.Unit, I.OnUnit)
   on(T.Corpse, I.OnWorldThing)
   on(T.Object, I.OnWorldThing)

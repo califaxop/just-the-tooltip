@@ -51,6 +51,8 @@ ns.DEFAULTS = {
   where = {},
   itemOrder = { "itemLevel", "sources", "itemId" }, -- the order of JTT's lines on items
   detailKey = "none",     -- "none", "ALT", "CTRL": held, tooltips show every detail (all sources, where each was learned)
+  npcIds = false,         -- (1.10.0) "NPC ID" on creatures (always with the detail key)
+  itemValue = false,      -- (1.10.0) "You have 12 (sell for 1g 20s)" on items (always with the detail key)
 }
 
 local function Copy(v)
@@ -158,7 +160,7 @@ function ns.SetShowsOn(line, kind, on)
 end
 
 -- the item lines in the order chosen: every line once (an old, damaged or missing order still works)
-ns.ITEM_LINES = { "itemLevel", "sources", "itemId" }
+ns.ITEM_LINES = { "itemLevel", "sources", "itemId", "itemValue" }
 function ns.ItemOrder()
   local out, seen = {}, {}
   local known = {}

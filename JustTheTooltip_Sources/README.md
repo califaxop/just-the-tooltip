@@ -3,7 +3,7 @@
 Data for Just the Tooltip!'s "where it comes from" lines on gear. It loads only when you hover gear
 with that option on.
 
-- Quest rewards, creature drops, vendors and chests: [QuestieDB](https://github.com/Questie/QuestieDB)'s
+- Quest rewards, creature drops, vendors and chests, and where creatures and chests are in their zone: [QuestieDB](https://github.com/Questie/QuestieDB)'s
   WoW: Forever database, by the Questie team and contributors, copied under the GNU General Public
   License v3 as the Questie team allows (see QuestieDB's LICENSE.md). This addon isn't made by or
   affiliated with Questie.

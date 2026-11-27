@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.10.0 (Milestone 5: expanded information and the source data; test build)
+
+- New, off by default: NPC IDs on creatures, and how many of an item you have with what they sell
+  for ("You have 20 (sell for 1s 20c)"). Both also show while you hold the detail key.
+- With the detail key held:
+  - spells say whether you know them;
+  - sources out in the world show where in the zone they are ("Westfall 52, 64").
+- The source data names up to 12 creatures, vendors or chests per item (6 before), so far fewer
+  items end in "+N more".
+- The source data is rebuilt from WoW: Forever's current game build. It's checked before every
+  release, and `/jtt report` says which build and date it was made from.
+
 ## 1.9.0 (Milestone 4: customization and presentation; test build)
 
 - New in the settings: choose where each line shows: on the game's tooltip, on chat links, on

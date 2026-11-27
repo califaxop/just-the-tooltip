@@ -592,9 +592,9 @@ def _():
       and GameTooltipTextLeft4._text:find("Source", 1, true))
     NS.db.itemOrder = { "itemId", "nonsense", "itemId" }
     local o = NS.ItemOrder()
-    assert(#o == 3 and o[1] == "itemId" and o[2] == "itemLevel" and o[3] == "sources")
+    assert(#o == 4 and o[1] == "itemId" and o[2] == "itemLevel" and o[3] == "sources" and o[4] == "itemValue", "1.10.0's item value added at the end")
     NS.db.itemOrder = nil
-    assert(#NS.ItemOrder() == 3, "missing: the default order")
+    assert(#NS.ItemOrder() == 4, "missing: the default order")
     assert(NS.MoveItemLine("sources", -1) and NS.ItemOrder()[1] == "sources" and not NS.MoveItemLine("sources", -1), "moved up; first can't go higher")
     """
 
@@ -687,6 +687,123 @@ def _():
     assert(t:find("Boss: Hogger | from JTT's data (QuestieDB, WoW: Forever) | database | not on the tooltip: NeedRoll's newer line for this dungeon replaces it", 1, true), t)
     assert(t:find("Dungeon: Hogger - The Stockade | from NeedRoll, in game", 1, true), t)
     """
+
+# ---------------------------------------------------------------------------------------------
+# M5: expanded information and the source data
+# ---------------------------------------------------------------------------------------------
+@test("NPC ID: a creature's from its GUID (the 6th part), never a player's or pet's; shown when turned on or with the detail key")
+def _():
+    """
+    local F = NS.Facts
+    assert(F.NpcFromGUID("Creature-0-1465-0-2105-448-000043F59F") == 448, "Hogger, the wiki's example")
+    assert(F.NpcFromGUID("Vehicle-0-4170-0-41-68662-00000F4B37") == 68662)
+    assert(F.NpcFromGUID("Player-1234-0ABCDEF") == nil and F.NpcFromGUID("Pet-0-1-0-0-416-01") == nil and F.NpcFromGUID(nil) == nil)
+    local T = GameTooltip
+    T.GetUnit = function() return "Hogger", "mouseover" end
+    MOCK.units.mouseover = { exists = true, isPlayer = false, reaction = 2 }
+    UnitGUID = function() return "Creature-0-1465-0-2105-448-000043F59F" end
+    local function lines() local t = {} for i = 1, T:NumLines() do t[#t + 1] = _G["GameTooltipTextLeft" .. i]._text or "" end return table.concat(t, " / ") end
+    T:ClearLines(); T:AddLine("Hogger"); MOCK.Post(Enum.TooltipDataType.Unit, T, {})
+    assert(not lines():find("NPC ID", 1, true), "off by default")
+    NS.db.npcIds = true
+    T:ClearLines(); T:AddLine("Hogger"); MOCK.Post(Enum.TooltipDataType.Unit, T, {})
+    assert(lines():find("NPC ID: 448", 1, true), lines())
+    UnitGUID = function() return MOCK.SECRET end
+    T:ClearLines(); T:AddLine("Hogger"); MOCK.Post(Enum.TooltipDataType.Unit, T, {})
+    assert(not lines():find("NPC ID", 1, true), "a hidden GUID: no line, no error")
+    """
+
+@test("item value: how many you have and what they sell for together; none only with the detail key")
+def _():
+    """
+    local V = NS.Info.ValueText
+    assert(V(12, 10) == "You have 12 (sell for 1|cffc7c7cfs|r 20|cffeda55fc|r)", V(12, 10))
+    assert(V(1, 25000):find("2|cffffd700g|r 50|cffc7c7cfs|r", 1, true), "gold and silver")
+    assert(V(3, 0) == "You have 3" and V(0, 10) == nil and V(0, 10, true) == "You have none" and V(nil, 10) == nil)
+    MOCK.items[2589] = { level = 5, equipLoc = "", classID = 7 }
+    C_Item.GetItemCount = function() return 20 end
+    local T = GameTooltip
+    T:ClearLines(); T:AddLine("Linen Cloth"); MOCK.Post(Enum.TooltipDataType.Item, T, { id = 2589 })
+    for i = 1, T:NumLines() do assert(not (_G["GameTooltipTextLeft" .. i]._text or ""):find("You have", 1, true), "off by default") end
+    NS.db.itemValue = true
+    T:ClearLines(); T:AddLine("Linen Cloth"); MOCK.Post(Enum.TooltipDataType.Item, T, { id = 2589 })
+    local found
+    for i = 1, T:NumLines() do if (_G["GameTooltipTextLeft" .. i]._text or ""):find("You have 20 (sell for", 1, true) then found = true end end
+    assert(found, "shown when on")
+    """
+
+@test("spells: with the detail key, whether you know it (not on buffs); the newer API first, the older as a fallback")
+def _():
+    """
+    NS.db.detailKey = "ALT"; MOCK.alt = true
+    C_SpellBook = { IsSpellKnown = function(id) return id == 403 end }
+    local T = GameTooltip
+    local function last() return _G["GameTooltipTextLeft" .. T:NumLines()]._text or "" end
+    T:ClearLines(); T:AddLine("Lightning Bolt"); MOCK.Post(Enum.TooltipDataType.Spell, T, { id = 403 })
+    assert(last():find("You know this spell", 1, true), last())
+    T:ClearLines(); T:AddLine("Chain Lightning"); MOCK.Post(Enum.TooltipDataType.Spell, T, { id = 421 })
+    assert(last():find("Not learned", 1, true), last())
+    T:ClearLines(); T:AddLine("Lightning Shield"); MOCK.Post(Enum.TooltipDataType.UnitAura, T, { id = 403 })
+    assert(not last():find("know", 1, true), "not on a buff")
+    C_SpellBook = nil; IsPlayerSpell = function() return true end
+    T:ClearLines(); T:AddLine("x"); MOCK.Post(Enum.TooltipDataType.Spell, T, { id = 1 })
+    assert(last():find("You know this spell", 1, true), "the older API")
+    MOCK.alt = false
+    T:ClearLines(); T:AddLine("x"); MOCK.Post(Enum.TooltipDataType.Spell, T, { id = 1 })
+    assert(not last():find("know", 1, true), "not without the key")
+    """
+
+@test("places: with the detail key, where in the zone a vendor, creature or chest out in the world is; /jtt source too; the data's format said")
+def _():
+    """
+    C_Map = { GetAreaInfo = function(id) return ({ [40] = "Westfall" })[id] end }
+    JustTheTooltipSources = { version = 2, build = "1.60.1.71139", made = "2026-11-27",
+      items = { [800] = "v1;d2" }, quests = {},
+      npcs = { [1] = "Seller|10|10|0|40|AH|52|64", [2] = "Old Murk-Eye|20|20|1|40||" }, objects = {}, instances = {} }
+    NS.db.sources = true
+    local T = GameTooltip
+    local function text() local t = {} for i = 1, T:NumLines() do t[#t + 1] = (_G["GameTooltipTextLeft" .. i]._text or "") .. "|" .. (_G["GameTooltipTextRight" .. i] and _G["GameTooltipTextRight" .. i]._text or "") end return table.concat(t, " / ") end
+    T:ClearLines(); T:AddLine("x"); NS.Sources.Add(T, 800)
+    assert(text():find("Westfall|r", 1, true) and not text():find("52, 64", 1, true), "no place without the key: " .. text())
+    T:ClearLines(); T:AddLine("x"); NS.Sources.Add(T, 800, true)
+    assert(text():find("Westfall 52, 64", 1, true), "with it: " .. text())
+    local ex = table.concat(NS.Sources.Explain(800), " / ")
+    assert(ex:find("Vendor: Seller (Westfall 52, 64)", 1, true) and ex:find("Old Murk-Eye", 1, true), ex)
+    assert(NS.Sources.loadState == "loaded (format 2, game build 1.60.1.71139, made 2026-11-27)", NS.Sources.loadState)
+    """
+
+@test("data format: older data still reads (no places); newer data is reported as needing an update")
+def _():
+    """
+    JustTheTooltipSources = { version = 3, items = {}, npcs = {}, quests = {}, objects = {} }
+    NS.Sources.Explain(1)
+    assert(NS.Sources.loadState:find("format 3", 1, true) and NS.Sources.loadState:find("update it", 1, true), NS.Sources.loadState)
+    """
+
+
+def _validator():
+    global count
+    count += 1
+    name = "source data: the real Data.lua passes the validator; a broken copy doesn't"
+    try:
+        sys.path.insert(0, os.path.join(ROOT, 'tools', 'sources'))
+        import validate
+        problems = validate.validate()
+        assert not problems, problems[:5]
+        import tempfile
+        src = open(validate.DEFAULT, encoding='utf-8').read()
+        broken = src.replace('version = 2,', 'version = 1,', 1).replace('items = {\n', 'items = {\n[1]="d99999999",\n', 1)
+        with tempfile.NamedTemporaryFile('w', suffix='.lua', delete=False, encoding='utf-8') as f:
+            f.write(broken)
+        bad = validate.validate(f.name)
+        os.unlink(f.name)
+        assert any('format version' in b for b in bad) and any('99999999' in b for b in bad), bad[:5]
+        print('ok   ', name)
+    except Exception as e:  # noqa
+        failures.append(name); print('FAIL ', name, '\n     ', e)
+
+
+_validator()
 
 if __name__ == '__main__':
     print(f"\n{count - len(failures)}/{count} passed")

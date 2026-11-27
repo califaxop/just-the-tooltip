@@ -81,7 +81,10 @@ local function BuildPanel(panel)
   track(at(UI.Check(panel, "Health bar under unit tooltips", S("healthBar"), W_, function() ns.Info.ApplyHealthBar() end), 26, -516))
   track(at(UI.Check(panel, "Hide right away when you stop hovering something (no fade)", S("instantHide"), W_), 26, -540))
   track(at(UI.Check(panel, "In combat, hide tooltips for things in the world (hold Shift to see)", S("combatHide"), W_), 26, -564))
-  local n = at(UI.Text(panel, "note", "Lines from your other addons (Equip This!, Questie, What's Training...) still show: Just the Tooltip! changes the game's tooltip rather than replacing it."), 26, -592)
+  -- (1.10.0)
+  track(at(UI.Check(panel, "NPC IDs on creatures", S("npcIds"), W_), 26, -588))
+  track(at(UI.Check(panel, "How many of an item you have, and what they sell for", S("itemValue"), W_), 26, -612))
+  local n = at(UI.Text(panel, "note", "Lines from your other addons (Equip This!, Questie, What's Training...) still show: Just the Tooltip! changes the game's tooltip rather than replacing it."), 26, -640)
   n:SetWidth(W_)
 
   -- Second column (1.9.0): where each line shows, their order, more detail, profiles -------------
@@ -106,7 +109,7 @@ local function BuildPanel(panel)
   wn:SetWidth(W_)
 
   at(UI.Section(panel, "Order of the lines on items", W_), X, -256)
-  local NAMES = { itemLevel = "Item level", sources = "Where gear comes from", itemId = "Item ID" }
+  local NAMES = { itemLevel = "Item level", sources = "Where gear comes from", itemId = "Item ID", itemValue = "How many you have" }
   local orderRows = {}
   local function refreshOrder()
     local o = ns.ItemOrder()
@@ -127,18 +130,18 @@ local function BuildPanel(panel)
   end
   refreshOrder()
 
-  at(UI.Section(panel, "More detail", W_), X, -380)
+  at(UI.Section(panel, "More detail", W_), X, -406)
   track(at(UI.Selector(panel, 300, {
     { "none", "Off" },
     { "ALT", "While holding Alt" },
     { "CTRL", "While holding Ctrl" },
-  }, S("detailKey"), nil, "Hold the key over a tooltip to see every detail."), X, -410))
-  local dn = at(UI.Text(panel, "note", "Held over a tooltip: every source (not only three), each tagged with where it was learned (JTT data, Questie, NeedRoll; \"Classic order\" for drops ordered by Classic 1.12 chances), and IDs and item level even where they're turned off."), X, -440)
+  }, S("detailKey"), nil, "Hold the key over a tooltip to see every detail."), X, -436))
+  local dn = at(UI.Text(panel, "note", "Held over a tooltip: every source (not only three), each tagged with where it was learned (JTT data, Questie, NeedRoll; \"Classic order\" for drops ordered by Classic 1.12 chances) and, out in the world, where in the zone; IDs (NPCs too), item level and how many you have even where they're off; and whether you know a spell."), X, -466)
   dn:SetWidth(W_)
 
-  at(UI.Section(panel, "Profiles", W_), X, -496)
+  at(UI.Section(panel, "Profiles", W_), X, -522)
   local function current() return ns.ProfileName() end
-  local pf = at(UI.Text(panel, "line", ""), X + 40, -529)
+  local pf = at(UI.Text(panel, "line", ""), X + 40, -555)
   local function refreshProfile()
     pf:SetText("This character uses:  " .. (current() and ("|cffffd200" .. current() .. "|r") or "|cffffd200Shared|r (every character's)"))
   end
@@ -150,10 +153,10 @@ local function BuildPanel(panel)
     i = (i - 1 + d) % #list + 1
     ns.UseProfile(list[i] or nil)
   end
-  at(UI.Button(panel, "<", 24, function() step(-1) end), X, -526)
-  local nxt = at(UI.Button(panel, ">", 24, function() step(1) end), X + W_ - 24, -526)
+  at(UI.Button(panel, "<", 24, function() step(-1) end), X, -552)
+  local nxt = at(UI.Button(panel, ">", 24, function() step(1) end), X + W_ - 24, -552)
   local newName = ""
-  local edit = at(UI.Edit(panel, 200, { function() return newName end, function(v) newName = v end }, "New profile name"), X, -558)
+  local edit = at(UI.Edit(panel, 200, { function() return newName end, function(v) newName = v end }, "New profile name"), X, -584)
   local create = UI.Button(panel, "New profile", 110, function()
     if edit.GetText then newName = edit:GetText() or newName end
     if ns.NewProfile(newName) then newName = ""; if edit.SetText then edit:SetText("") end
@@ -165,7 +168,7 @@ local function BuildPanel(panel)
     if n then ns.DeleteProfile(n); ns.Print("profile \"" .. n .. "\" deleted; this character uses the shared settings.") end
   end)
   del:SetPoint("LEFT", create, "RIGHT", 8, 0)
-  local pn = at(UI.Text(panel, "note", "Shared: the settings every character uses unless it picks a profile. Each profile is a whole set of settings of its own; a new one starts as a copy of the settings in use. < > switches this character's."), X, -590)
+  local pn = at(UI.Text(panel, "note", "Shared: the settings every character uses unless it picks a profile. Each profile is a whole set of settings of its own; a new one starts as a copy of the settings in use. < > switches this character's."), X, -616)
   pn:SetWidth(W_)
   ns.RefreshOptions = function()
     for _, w in ipairs(refreshers) do w.Refresh() end
@@ -175,7 +178,7 @@ local function BuildPanel(panel)
   refreshProfile(); del.SetActive(current() ~= nil)
 
   -- hover to see where tooltips go now
-  local preview = at(UI.Button(panel, "Hover to preview", 150, function() end), 26, -638)
+  local preview = at(UI.Button(panel, "Hover to preview", 150, function() end), 26, -686)
   preview:HookScript("OnEnter", function(self)
     GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
     GameTooltip:SetText("Just the Tooltip!")
@@ -187,7 +190,7 @@ local function BuildPanel(panel)
   panel:HookScript("OnShow", function() ns.RefreshOptions() end)
   panel:HookScript("OnHide", function() if ns.Anchor.unlocked then ns.Anchor.Unlock(false) end end)
   showRows()
-  panel.height = 684
+  panel.height = 732
 end
 
 function ns.CreateOptions()

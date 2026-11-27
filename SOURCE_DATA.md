@@ -34,7 +34,8 @@ Settings in `build.py`:
 |---|---|---|
 | `GEAR` | 2, 4 | weapons and armor only |
 | `WORLD_DROP` | 12 | dropped by more creatures than this: one "World drop" line with its level range |
-| `MAX_IDS` | 6 | creatures, vendors and objects kept per item (the rest counted as "+N more") |
+| `MAX_IDS` | 12 (6 before 1.10.0) | creatures, vendors and objects named per item (the rest counted as "+N more") |
+| `FORMAT` | 2 | the data's format (also in `validate.py` and `Sources.lua`) |
 | `RANDOM_CHEST` | 25 | a container with more pieces of gear than this is random loot |
 
 ## Format
@@ -42,14 +43,36 @@ Settings in `build.py`:
 The tables are `items`, `npcs`, `quests`, `objects`, `instances` and `skills`.
 - Each item entry is a `;`-separated list of parts: `q` quests, `d` drops (`id:chance`), `v`
   vendors, `o` objects, `w` world drop levels, `c` profession, `r` random chests.
+- Creatures: name | min level | max level | rank | zone | friendly to | x | y. Objects: name | zone
+  | x | y. x, y (format 2) is the first spawn in that zone, 0-100, from QuestieDB; empty inside
+  instances or when there's none.
 - Zones are area IDs, named in game (`C_Map.GetAreaInfo`), which keeps the file small.
+
+## Checking
+
+```
+python tools/sources/validate.py
+```
+
+It checks:
+- the header's attribution (QuestieDB, CMaNGOS, GPLv3, wago.tools);
+- the format version, the build and the date made;
+- every item part's shape;
+- every quest, creature, object and profession reference;
+- every creature, object and quest row's fields, with places within 0-100;
+- the counts.
+
+Run it after every build. `tests/run_tests.py` runs it too, and checks that it catches a broken
+copy.
 
 ## Versioning
 
-- `Data.lua` records the game build it was made from (`build = "1.60.1.71037"`).
-- The companion's toc has its own version (1.0.0).
+- `Data.lua` records its format (`version = 2`), the game build it was made from
+  (`build = "1.60.1.71139"`), the date (`made`) and its counts.
+- The companion's toc has its own version (1.1.0 since format 2).
+- JTT reads format 1 (no places) and format 2. Newer data than it reads is reported (`/jtt info`,
+  `/jtt report`: "newer than this Just the Tooltip! reads: update it").
 - The data is refreshed weekly with the Wednesday release when upstream has changed.
-- Planned for Milestone 5: a data version JTT checks against, so an old companion is reported.
 
 ## Limitations
 

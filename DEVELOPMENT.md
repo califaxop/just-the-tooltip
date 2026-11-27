@@ -17,8 +17,8 @@ file holds the architecture, conventions, milestone plan and progress.
 | 1 | Tooltip accuracy and reliability | Done in 1.6.0, verified in game, reviewed |
 | 2 | Tooltip lifecycle and compatibility | Done in 1.7.0, verified in game, reviewed |
 | 3 | Information engine | Done in 1.8.0, verified in game, reviewed |
-| 4 | Customization and presentation | **Done in 1.9.0, verified in game, waiting for review** |
-| 5 | Expanded information and source database | Not started |
+| 4 | Customization and presentation | Done in 1.9.0, verified in game, reviewed |
+| 5 | Expanded information and source database | **Done in 1.10.0 (offline); in-game checks pending, then review** |
 | 6 | Diagnostics and release | Not started |
 
 Each milestone is reviewed before the next starts.
@@ -47,7 +47,7 @@ Each milestone is reviewed before the next starts.
 - **Hygiene.** No unused code or settings. Offline tests (`tests/run_tests.py`) cover the logic;
   game behaviour is checked in game (checklists below), never claimed from the tests.
 
-## Architecture (1.9.0)
+## Architecture (1.10.0)
 
 | File | Role |
 |---|---|
@@ -367,4 +367,37 @@ Results (1.9.0 test build):
   to both). Now "not named (Just the Tooltip! names up to 6 of each kind)". Item ID shown with Alt
   while turned off: pass.
 
-Milestone 4 verified in game; awaiting review before Milestone 5.
+Milestone 4 verified in game and reviewed.
+
+## Milestone 5 (1.10.0)
+
+| # | Change | Notes |
+|---|---|---|
+| 21 | NPC ID | `Facts.NpcFromGUID`: the 6th part of a Creature or Vehicle GUID. warcraft.wiki.gg (UnitGUID, patch 1.60.1, WoW: Forever's): the server and spawn parts are scrambled, the format is unchanged. Players and pets: none. Setting "NPC IDs on creatures" (off by default), and always with the detail key |
+| 22 | How many you have, and their value | `Facts.Count` (`C_Item.GetItemCount`, bank included once seen) and the sell price (GetItemInfo's 11th): "You have 20 (sell for 1s 20c)". Setting off by default, and always with the detail key ("You have none" too). A fourth item line in the order list |
+| 23 | Whether you know a spell | With the detail key, on spells (not buffs): "You know this spell" / "Not learned". `C_SpellBook.IsSpellKnown`, else `IsPlayerSpell` (deprecated in 11.2; warcraft.wiki.gg) |
+| 24 | Places | The data now has where each creature and chest out in the world is in its zone (QuestieDB's first spawn there, 0-100; none inside instances). Questie's items get them from its spawns too. With the detail key: "Westfall 52, 64"; and in `/jtt source` |
+| 25 | More sources named | The data names up to 12 creatures, vendors or chests of each kind per item (6 before): items with only a count past those named, 264 → 95 |
+| 26 | Source data built and checked | Rebuilt from the game's build 1.60.1.71139 (yours; it was 71037). Format version 2, the build and the date in the file, and the counts. `tools/sources/validate.py` checks the header's attribution, the format, every reference and field, and the counts. It runs after each build and in the tests, where a broken copy is caught too. JTT reads format 1 (no places) and says when the data is newer than it reads (`/jtt info`, `/jtt report`: "source data: loaded (format 2, game build ..., made ...)") |
+
+The data grew from 213 to 223 KB. The companion is version 1.1.0.
+
+Three new categories (`/jtt info`): NPC ID, how many you have, and whether you know a spell. Each
+lists what it needs, as M3's do.
+
+### In-game checklist (Milestone 5 → 6)
+
+1. Install 1.10.0 (both folders) and `/reload`. Tooltips as in 1.9.0, with no Lua errors.
+   `/jtt report`: "source data: loaded (format 2, game build 1.60.1.71139, made ...)" once you've
+   hovered gear.
+2. `/jtt info`: nine categories, the three new ones "available".
+3. **NPC IDs:** tick "NPC IDs on creatures". Hover a creature: "NPC ID: N". Hover a player: none.
+   Untick: gone. With Alt held (detail key on Alt): there.
+4. **How many you have:** tick it. Hover cloth or ore in your bags: "You have 20 (sell for ...)".
+   Compare the amount with your bags (and bank, once opened).
+5. **Spells (Alt held):** a spell in your spellbook says "You know this spell"; a link to one you
+   don't have (a higher rank, another class's) says "Not learned". Buffs say neither.
+6. **Places (Alt held):** a vendor-sold or world-dropped item: the vendor's or creature's zone has
+   coordinates ("Westfall 52, 64"). Check one against the map.
+7. **More sources:** gear that said "+N more" in 1.9.0 names more now.
+8. `/jtt source` on a vendor item: the vendor with its zone and place.

@@ -44,9 +44,9 @@ function F.Item(tip, data)
   if not it.link then return it end
   local _, _, _, equipLoc, _, classID = Safe(Resolve("C_Item.GetItemInfoInstant|GetItemInfoInstant"), it.link)
   it.equipLoc, it.classID = equipLoc, classID
-  local name, _, quality, level, _, _, _, _, equipLoc2, _, _, classID2 = Safe(Resolve("C_Item.GetItemInfo|GetItemInfo"), it.link)
+  local name, _, quality, level, _, _, _, stack, equipLoc2, _, sellPrice, classID2 = Safe(Resolve("C_Item.GetItemInfo|GetItemInfo"), it.link)
   it.cached = name ~= nil
-  it.level, it.quality = level, quality
+  it.level, it.quality, it.stack, it.sellPrice = level, quality, stack, sellPrice
   if it.equipLoc == nil then it.equipLoc = equipLoc2 end
   if it.classID == nil then it.classID = classID2 end
   if it.quality == nil then it.quality = Safe(Resolve("C_Item.GetItemQualityByID"), it.link) end
@@ -59,6 +59,20 @@ end
 function F.Spell(data)
   local id = type(data) == "table" and data.id
   return { id = Readable(id) and type(id) == "number" and id or nil }
+end
+-- (1.10.0) whether you know it: true, false, or nil (can't tell). C_SpellBook.IsSpellKnown, else the
+-- older IsPlayerSpell (deprecated in 11.2; warcraft.wiki.gg)
+function F.Known(id)
+  if type(id) ~= "number" then return nil end
+  local k = Safe(Resolve("C_SpellBook.IsSpellKnown|IsPlayerSpell"), id)
+  if type(k) == "boolean" then return k end
+end
+
+-- (1.10.0) how many of an item you have (bags, and the bank once seen), or nil
+function F.Count(id)
+  if type(id) ~= "number" then return nil end
+  local n = Safe(Resolve("C_Item.GetItemCount|GetItemCount"), id, true)
+  if type(n) == "number" then return n end
 end
 
 ---------------------------------------------------------------------------
@@ -88,6 +102,19 @@ function F.Unit(token)
   return u
 end
 
+-- (1.10.0) a creature's NPC ID, from its GUID ("Creature-0-[server]-[instance]-[zone]-[npcID]-[spawn]";
+-- "Vehicle" the same). WoW: Forever 1.60.1 scrambles the server and spawn parts only, the format is
+-- unchanged (warcraft.wiki.gg, UnitGUID). Players, pets and anything else: nil.
+function F.NpcFromGUID(guid)
+  if type(guid) ~= "string" then return nil end
+  local kind, id = guid:match("^(%a+)%-[^-]*%-[^-]*%-[^-]*%-[^-]*%-(%d+)%-")
+  if kind == "Creature" or kind == "Vehicle" then return tonumber(id) end
+end
+function F.NpcID(token)
+  if type(token) ~= "string" then return nil end
+  return F.NpcFromGUID(Safe(UnitGUID, token))
+end
+
 -- who `token` is targeting: the unit facts plus isMe and name, or nil (no target, or can't tell)
 function F.Target(token)
   if type(token) ~= "string" then return nil end
@@ -113,6 +140,13 @@ F.CATEGORIES = {
   { key = "sources", name = "Where gear comes from", setting = "sources", needs = {}, status = VERIFIED },
   { key = "target", name = "Target line", setting = "target", needs = { "UnitExists", "UnitIsUnit", "UnitName" }, status = VERIFIED },
   { key = "look", name = "Look, borders and name colours", setting = "look", needs = {}, status = VERIFIED },
+  -- (1.10.0)
+  { key = "npcId", name = "NPC ID", setting = "npcIds", needs = { "UnitGUID" },
+    status = "Verified by documentation (warcraft.wiki.gg: GUID format unchanged in 1.60.1)" },
+  { key = "itemValue", name = "How many you have, and what they sell for", setting = "itemValue",
+    needs = { "C_Item.GetItemCount|GetItemCount" }, status = "Verified by documentation (warcraft.wiki.gg)" },
+  { key = "spellKnown", name = "Whether you know a spell (with the detail key)", setting = "detailKey",
+    needs = { "C_SpellBook.IsSpellKnown|IsPlayerSpell" }, status = "Verified by documentation (warcraft.wiki.gg)" },
 }
 local byKey = {}
 for _, c in ipairs(F.CATEGORIES) do byKey[c.key] = c end
@@ -151,7 +185,7 @@ function F.InfoLines()
   local L = {}
   for _, c in ipairs(F.CATEGORIES) do
     local setting = ns.db and ns.db[c.setting]
-    local on = c.key == "look" and "on" or (setting and "on" or "off")
+    local on = c.key == "look" and "on" or c.key == "spellKnown" and (setting ~= "none" and "on" or "off") or (setting and "on" or "off")
     local missing = F.Missing(c.key)
     local e = F.errors[c.key]
     L[#L + 1] = format("%s: %s; %s; %s%s", c.name, on,
