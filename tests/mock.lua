@@ -39,6 +39,8 @@ MOCK.methods = {
   SetPoint = function(s, p, rel, rp, x, y) s._points[p] = { rel, rp, x, y }; s._lastPoint = { p, rel, rp, x, y } end,
   SetText = function(s, t) s._text = t end, GetText = function(s) return s._text end,
   SetTextColor = function(s, r, g, b) s._color = { r, g, b } end,
+  GetPoint = function(s) if s._lastPoint then return unpack(s._lastPoint) end end,
+  IsMouseOver = function(s) return s._over end,
   GetFrameLevel = function() return 5 end, GetWidth = function() return 1920 end, GetHeight = function() return 1080 end,
 }
 CreateFrame = function(kind, name, parent) return obj(name, parent) end
@@ -68,6 +70,9 @@ MOCK.Tooltip = Tooltip
 GameTooltip = Tooltip("GameTooltip"); ItemRefTooltip = Tooltip("ItemRefTooltip")
 GameTooltipStatusBar = obj("GameTooltipStatusBar")
 
+MOCK.timers = {}
+C_Timer = { After = function(_, fn) table.insert(MOCK.timers, fn) end }
+function MOCK.RunTimers() local t = MOCK.timers; MOCK.timers = {}; for _, fn in ipairs(t) do fn() end end
 GetCursorPosition = function() return MOCK.cursor[1], MOCK.cursor[2] end
 GetTime = function() return MOCK.now end
 InCombatLockdown = function() return false end

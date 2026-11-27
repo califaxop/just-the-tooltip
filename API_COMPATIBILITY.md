@@ -27,6 +27,12 @@ values become nil.
 | `UPDATE_MOUSEOVER_UNIT`, `WORLD_CURSOR_TOOLTIP_UPDATE(anchorType)`, `Enum.WorldCursorAnchorType.None` | world tooltips that stayed up | Verified in WoW Forever (`/jtt trace`) |
 | `GetMouseFoci()` (older: `GetMouseFocus()`) | the mouse moved onto the interface | Verified in WoW Forever |
 
+| `Frame:IsMouseOver()`, `Frame:IsVisible()` | owner watch (1.7.0: only after the mouse was over the frame; a hidden frame takes its tooltip) | IsMouseOver: Verified in WoW Forever (in use since 1.3). IsVisible on owners: Verified by documentation; in-game check 4 (1.7.0) |
+| `Region:GetPoint(1)` → point, relativeTo, ... | the placement check (`/jtt compat`) | Verified by documentation; in-game check 8 (1.7.0) |
+| `tip.NineSlice:GetAlpha()`, `:SetAlpha()`, `:SetBorderColor()` | JTT style fades the game's border; Blizzard style puts it back | Verified in WoW Forever |
+| `tip.NineSlice:GetBorderColor()` | the border's own colour, put back in Blizzard style (1.7.0) | Inferred; read through `ns.Safe` (missing: the game's default colour) |
+| `C_Timer.After(0, fn)` | the placement check a frame later | Verified in WoW Forever |
+
 ## Positioning
 
 | API | Use | Status |

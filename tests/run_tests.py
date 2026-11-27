@@ -281,6 +281,146 @@ def _():
     assert(S.QuestieState() == "ready")
     """
 
+# ---------------------------------------------------------------------------------------------
+# M2: lifecycle, owners, look, late tooltips, compatibility
+# ---------------------------------------------------------------------------------------------
+@test("lifecycle: each new tooltip starts a clean record; nothing from the last one carries over")
+def _():
+    """
+    local S, T = NS.Anchor.state, GameTooltip
+    NS.db.instantHide = true
+    -- a world unit's tooltip
+    GameTooltip_SetDefaultAnchor(T, UIParent); T:Show()
+    MOCK.units.mouseover = { exists = true, isPlayer = false, reaction = 2 }
+    T.GetUnit = function() return "Defias", "mouseover" end
+    MOCK.Post(Enum.TooltipDataType.Unit, T, {})
+    local gen = S.gen
+    assert(S.unit == true and S.watchUnit == true, "watching the unit")
+    -- straight on to a bag item (no hide between): a clean record (1.6.0 kept 'a unit' until it hid)
+    T:SetOwner(UIParent, "ANCHOR_RIGHT")
+    assert(S.gen == gen + 1 and S.unit == false and S.watchUnit == false and S.startFocus == nil, "fresh")
+    """
+
+@test("lifecycle: a world tooltip that comes back with nothing new in it (a ghost) is hidden again; something new clears it")
+def _():
+    """
+    local S, T = NS.Anchor.state, GameTooltip
+    NS.db.instantHide = true
+    GameTooltip_SetDefaultAnchor(T, UIParent); T:Show()
+    T.GetUnit = function() return "Defias", "mouseover" end
+    MOCK.units.mouseover = { exists = true }
+    MOCK.Post(Enum.TooltipDataType.Unit, T, {})
+    T:Hide()
+    assert(S.ghost == true and S.unit == false)
+    T:Show()
+    assert(not T._shown, "the ghost hidden again")
+    GameTooltip_SetDefaultAnchor(T, UIParent); T:Show()
+    assert(T._shown and S.ghost == false, "a new tooltip shows")
+    """
+
+@test("lifecycle: a world unit's tooltip goes when the game's mouseover unit is gone")
+def _():
+    """
+    local S, T = NS.Anchor.state, GameTooltip
+    NS.db.instantHide = true
+    GameTooltip_SetDefaultAnchor(T, UIParent); T:Show()
+    T.GetUnit = function() return "Defias", "mouseover" end
+    MOCK.units.mouseover = { exists = true }
+    MOCK.Post(Enum.TooltipDataType.Unit, T, {})
+    MOCK.Update(0.06)
+    assert(T._shown, "still hovered")
+    MOCK.units.mouseover = { exists = false }
+    MOCK.Update(0.06)
+    assert(not T._shown, "hidden when the unit is gone")
+    """
+
+@test("owners: hidden once the mouse has been over the frame and left it; a frame the mouse never was on keeps it; a hidden frame takes it")
+def _():
+    """
+    local S, T = NS.Anchor.state, GameTooltip
+    NS.db.instantHide = true
+    local f = MOCK.obj("SomeButton", UIParent)
+    -- shown for a frame the mouse isn't on (an addon, the keyboard): left alone (1.6.0 hid it in 0.1 s)
+    f._over = false
+    GameTooltip_SetDefaultAnchor(T, f); T:Show()
+    for _ = 1, 10 do MOCK.Update(0.05) end
+    assert(T._shown and S.owner == f and not S.ownerSeen, "kept")
+    -- the mouse comes over it, then leaves
+    f._over = true; MOCK.Update(0.05)
+    assert(S.ownerSeen)
+    f._over = false; MOCK.Update(0.05); assert(T._shown, "a moment off it")
+    MOCK.Update(0.06); assert(not T._shown, "gone after 0.1 s off it")
+    -- a frame that hides while its tooltip is up
+    GameTooltip_SetDefaultAnchor(T, f); T:Show()
+    f._over = true; MOCK.Update(0.05)
+    f._shown = false; MOCK.Update(0.05)
+    assert(not T._shown, "its frame gone: hidden at once")
+    """
+
+@test("look: Blizzard style puts back the border's own alpha and colour (not 1 and the default)")
+def _():
+    """
+    local T = GameTooltip
+    -- a fresh tooltip whose border another addon keeps faded and tinted
+    local tip = MOCK.Tooltip("ShoppingTooltip1")
+    tip.NineSlice._alpha = 0.6
+    tip.NineSlice.GetBorderColor = function() return 0.1, 0.2, 0.3 end
+    local set
+    tip.NineSlice.SetBorderColor = function(_, r, g, b) set = { r, g, b } end
+    NS.db.look = "addon"
+    NS.Look.Adopt(tip); tip:Show()
+    assert(tip.NineSlice._alpha == 0, "JTT style: the game's border faded out")
+    NS.db.look = "blizzard"; NS.Look.Refresh()
+    assert(tip.NineSlice._alpha == 0.6, "its own alpha back: " .. tostring(tip.NineSlice._alpha))
+    assert(set and set[1] == 0.1 and set[3] == 0.3, "its own border colour back")
+    """
+
+@test("late tooltips: one of ours made after login is styled the first time JTT writes to it, once")
+def _():
+    """
+    NS.db.look = "addon"
+    local tip = MOCK.Tooltip("ShoppingTooltip3")
+    assert(not NS.Look.adopted[tip])
+    tip:AddLine("Some Item")
+    MOCK.Post(Enum.TooltipDataType.Item, tip, { id = 1 })
+    assert(NS.Look.adopted[tip], "adopted")
+    tip:Show()
+    assert(NS.Look.skins[tip] and NS.Look.skins[tip]._shown, "styled")
+    local n = 0
+    local old = tip._scripts.OnShow
+    MOCK.Post(Enum.TooltipDataType.Item, tip, { id = 1 })
+    assert(tip._scripts.OnShow == old, "hooked once")
+    -- not ours (an addon's hidden scanning tooltip): never touched
+    local scan = MOCK.Tooltip("SomeAddonScanTooltip")
+    MOCK.Post(Enum.TooltipDataType.Item, scan, { id = 1 })
+    assert(not NS.Look.adopted[scan] and scan:NumLines() == 0)
+    """
+
+@test("compatibility: a tooltip moved after JTT placed it is counted; one left alone isn't; /jtt compat reports")
+def _():
+    """
+    NS.db.anchor = "cursor"
+    local T = GameTooltip
+    GameTooltip_SetDefaultAnchor(T, UIParent); T:Show()
+    MOCK.RunTimers()
+    assert(NS.Anchor.placement.placed == 1 and NS.Anchor.placement.moved == 0, "left alone")
+    GameTooltip_SetDefaultAnchor(T, UIParent); T:Show()
+    local other = MOCK.obj("TipTacAnchor", UIParent)
+    T:SetPoint("BOTTOMRIGHT", other, "BOTTOMRIGHT", 0, 0) -- another addon moves it
+    MOCK.RunTimers()
+    assert(NS.Anchor.placement.moved == 1 and NS.Anchor.placement.lastBy == "TipTacAnchor")
+    -- a check for an earlier tooltip is dropped
+    GameTooltip_SetDefaultAnchor(T, UIParent); T:Show()
+    T:SetOwner(UIParent, "ANCHOR_RIGHT")
+    T:SetPoint("BOTTOMRIGHT", other, "BOTTOMRIGHT", 0, 0)
+    MOCK.RunTimers()
+    assert(NS.Anchor.placement.moved == 1, "a newer tooltip isn't counted against the old placement")
+    PRINTS = {}
+    SlashCmdList.JUSTTHETOOLTIP("compat")
+    local t = table.concat(PRINTS, " / ")
+    assert(t:find("2 moved", 1, true) == nil and t:find("1 moved by something else", 1, true) and t:find("Questie: absent", 1, true), t)
+    """
+
 if __name__ == '__main__':
     print(f"\n{count - len(failures)}/{count} passed")
     sys.exit(1 if failures else 0)

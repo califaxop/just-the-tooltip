@@ -132,8 +132,9 @@ local function BugReport()
     yes(db.colorBorder), yes(db.colorNPC), yes(db.ids), yes(db.itemLevel), yes(db.sources), yes(db.target), yes(db.healthBar),
     yes(db.combatHide), yes(db.instantHide))
   local srcOk = ns.Sources.Available()
-  L[#L + 1] = format("sources addon: %s (%s); Questie: %s; FlareUI: %s; EllesmereUI: %s", srcOk and "installed" or "not installed",
-    ns.Sources.loadState, ns.Sources.QuestieState(), yes(type(FlareUI) == "table"), yes(UI.HasEllesmere()))
+  L[#L + 1] = format("sources addon: %s; FlareUI: %s; EllesmereUI: %s", srcOk and "installed" or "not installed",
+    yes(type(FlareUI) == "table"), yes(UI.HasEllesmere()))
+  for _, l in ipairs(ns.CompatLines()) do L[#L + 1] = l end
   local hooks = {}
   for k in pairs(ns.hooks) do hooks[#hooks + 1] = k end
   table.sort(hooks)

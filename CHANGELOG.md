@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.7.0 (Milestone 2: tooltip lifecycle and compatibility; test build)
+
+- Each tooltip starts with a clean slate. Nothing about the tooltip before it (a unit, a thing in
+  the world, the frame you were over) carries over.
+- A frame's tooltip is hidden when you move off the frame only if you were on it. A tooltip an
+  addon or the keyboard shows for a frame you're not over stays up. A frame that hides takes its
+  tooltip with it.
+- Blizzard's look puts back the tooltip border's own transparency and colour, so a border another
+  addon tinted or faded stays as that addon set it.
+- Comparison and other tooltips the game makes after login get JTT's look too.
+- New `/jtt compat`: other tooltip addons, whether anything moves tooltips after JTT places them,
+  which tooltips are styled, and what JTT does with NeedRoll, Auctionator and Questie. It's in
+  `/jtt report` too.
+
 ## 1.6.0 (Milestone 1: tooltip accuracy and reliability; test build)
 
 - Fixed: a Spell ID or Item ID could be left out when the tooltip already showed a longer number

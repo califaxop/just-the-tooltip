@@ -7,6 +7,23 @@ local Safe = ns.Safe
 
 local skins = {}
 L.skins = skins -- (for checks)
+-- (1.7.0) Each tooltip's own look before JTT first touched it: its border's (NineSlice) alpha and
+-- colour. Blizzard style puts these back rather than assuming them (another addon may keep the
+-- border faded or tinted).
+local orig = {}
+L.orig = orig
+local function Remember(tip)
+  if orig[tip] then return orig[tip] end
+  local o = {}
+  local n = tip.NineSlice
+  if n then
+    o.alpha = ns.Safe(n.GetAlpha, n)
+    local r, g, b = ns.Safe(n.GetBorderColor, n)
+    if type(r) == "number" then o.border = { r, g, b } end
+  end
+  orig[tip] = o
+  return o
+end
 local colors = {} -- [tooltip] = { r, g, b } for what it shows now (quality / class), or nil
 
 -- our panel sits just under the tooltip's own text (a lower frame level), and the game's border
@@ -24,6 +41,7 @@ end
 
 local function Paint(tip)
   if not ns.db then return end
+  local o = Remember(tip)
   local c = colors[tip] -- set only when that colouring is turned on
   local r, g, b = c and c[1], c and c[2], c and c[3]
   local ui = ns.UI
@@ -50,11 +68,13 @@ local function Paint(tip)
     if tip.NineSlice then tip.NineSlice:SetAlpha(0) end
   else
     if skins[tip] then skins[tip]:Hide() end
-    if tip.NineSlice then
-      tip.NineSlice:SetAlpha(1)
-      if r and tip.NineSlice.SetBorderColor then tip.NineSlice:SetBorderColor(r, g, b, 1)
-      elseif tip.NineSlice.SetBorderColor and TOOLTIP_DEFAULT_COLOR then
-        tip.NineSlice:SetBorderColor(TOOLTIP_DEFAULT_COLOR.r, TOOLTIP_DEFAULT_COLOR.g, TOOLTIP_DEFAULT_COLOR.b, 1)
+    local n = tip.NineSlice
+    if n then
+      n:SetAlpha(type(o.alpha) == "number" and o.alpha or 1)
+      if r and n.SetBorderColor then n:SetBorderColor(r, g, b, 1)
+      elseif n.SetBorderColor then
+        local d = o.border or (TOOLTIP_DEFAULT_COLOR and { TOOLTIP_DEFAULT_COLOR.r, TOOLTIP_DEFAULT_COLOR.g, TOOLTIP_DEFAULT_COLOR.b })
+        if d then n:SetBorderColor(d[1], d[2], d[3], 1) end
       end
     end
   end
@@ -118,17 +138,25 @@ function L.OnUnit(tip, unit)
   Paint(tip)
 end
 
--- every tooltip we touch: styled whenever it shows; its color forgotten when it's cleared
+-- Every tooltip we touch: styled whenever it shows; its colour forgotten when it's cleared. The
+-- game's main ones at login; any other of ours (a shopping tooltip made later) the first time JTT
+-- writes to it (1.7.0: before, those kept the game's look). Each tooltip once (L.adopted).
+local adopted = {}
+L.adopted = adopted
+function L.Adopt(tip)
+  if not tip or adopted[tip] or not ns.IsOurs(tip) then return end
+  adopted[tip] = true
+  tip:HookScript("OnShow", Paint)
+  pcall(tip.HookScript, tip, "OnTooltipCleared", function(t) colors[t] = nil end)
+  if tip:IsShown() then Paint(tip) end
+end
 function L.Hook()
   if not ns.Once("look") then return end
-  for _, tip in ipairs(ns.Tooltips()) do
-    tip:HookScript("OnShow", Paint)
-    pcall(tip.HookScript, tip, "OnTooltipCleared", function(t) colors[t] = nil end)
-  end
+  for _, tip in ipairs(ns.Tooltips()) do L.Adopt(tip) end
 end
 
 -- re-paint every tooltip now (after a settings change)
 function L.Refresh()
   L.stamp = L.stamp + 1
-  for _, tip in ipairs(ns.Tooltips()) do Paint(tip) end
+  for tip in pairs(adopted) do Paint(tip) end
 end

@@ -370,6 +370,8 @@ function S.Hold() -- at login, and when our sources are turned on or off
     S.Release()
   end
 end
+function S.Holding() return held end
+function S.NeedRollLoaded() return NeedRollLoaded() end
 function S.Release() -- logout (before NeedRoll's setting is saved), and our sources turned off
   -- (still off as we left it: back as it was; turned on in NeedRoll's own settings since: kept)
   if held and type(NeedRollDB) == "table" and NeedRollDB.tooltipSources == false then NeedRollDB.tooltipSources = heldValue end

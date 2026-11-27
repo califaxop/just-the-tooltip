@@ -170,7 +170,10 @@ function I.Hook()
   local function on(kind, fn)
     if kind == nil then return end
     TooltipDataProcessor.AddTooltipPostCall(kind, function(tip, data)
-      if ns.db and ns.IsOurs(tip) then fn(tip, data) end
+      if ns.db and ns.IsOurs(tip) then
+        ns.Look.Adopt(tip) -- (one made after login: styled from now on)
+        fn(tip, data)
+      end
     end)
   end
   on(T.Item, I.OnItem)

@@ -18,6 +18,18 @@ checked before each use, and JTT does without it when a part is missing.
 | **TipTac, TinyTooltip, TinyTooltip-Reforged, ElvUI, Tukui, CursorTooltip** | `IsAddOnLoaded(name)` at login | — | a one-time warning: JTT has the last say on where the tooltip goes (it loads after them, OptionalDeps), but they may also move or restyle it | none | Detection: Verified in WoW Forever. How each behaves alongside JTT: Inferred (M2 compatibility diagnostics) |
 | **Equip This!, What's Training, Questie (its own lines)** | — | — | nothing: they add lines to the same tooltip, and JTT keeps them | none | Verified in WoW Forever |
 
+## Diagnostics (1.7.0)
+
+`/jtt compat` (also in `/jtt report`) shows:
+- the other tooltip addons that are loaded;
+- how many tooltips JTT placed, and how many something else moved afterwards, with the frame each
+  now hangs from;
+- which tooltips JTT styles;
+- what JTT does with NeedRoll and Auctionator;
+- Questie's state and the source data's state.
+
+Before 1.7.0 the only diagnostic for the other tooltip addons was the one-time warning at login.
+
 ## Rules
 
 - **Session-only changes.** A change to another addon's setting lasts for the session only. It's

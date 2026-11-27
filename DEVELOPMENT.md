@@ -14,8 +14,8 @@ file holds the architecture, conventions, milestone plan and progress.
 
 | # | Milestone | Status |
 |---|---|---|
-| 1 | Tooltip accuracy and reliability | **Done in 1.6.0 (offline); in-game checks pending, then review** |
-| 2 | Tooltip lifecycle and compatibility | Not started |
+| 1 | Tooltip accuracy and reliability | Done in 1.6.0, verified in game, reviewed |
+| 2 | Tooltip lifecycle and compatibility | **Done in 1.7.0 (offline); in-game checks pending, then review** |
 | 3 | Information engine | Not started |
 | 4 | Customization and presentation | Not started |
 | 5 | Expanded information and source database | Not started |
@@ -47,7 +47,7 @@ Each milestone is reviewed before the next starts.
 - **Hygiene.** No unused code or settings. Offline tests (`tests/run_tests.py`) cover the logic;
   game behaviour is checked in game (checklists below), never claimed from the tests.
 
-## Architecture (1.6.0)
+## Architecture (1.7.0)
 
 | File | Role |
 |---|---|
@@ -81,9 +81,21 @@ ADDON_LOADED loads the settings and builds the settings window. PLAYER_LOGIN the
    `WORLD_CURSOR_TOOLTIP_UPDATE`, `C_TooltipInfo.GetWorldCursor`, the interface under the mouse).
 5. On hide: `Stop()`, and a "ghost" mark if it was a world unit or thing.
 
-Lifecycle state in `Anchor.lua`: `following`, `watching`, `worldUnit`, `owner`, `ghost`,
-`worldThing`, `thingWatch`, `seenCursor` (and `startFocus`, `lastX`, `lastY`, `lastScale`). It's
-centralised in Milestone 2.
+Lifecycle state (1.7.0): one record, `Anchor.state` (S), described field by field at the top of
+`Anchor.lua`.
+
+| Moment | What happens to S |
+|---|---|
+| `SetOwner` (every new tooltip starts with it) | `Fresh()`: a new `gen`; unit, thing, ghost, cursor, focus and owner facts cleared; watching stopped |
+| `GameTooltip_SetDefaultAnchor` | placement: `following` (cursor), your spot, or `owner` (a frame, watched); a placement check a frame later |
+| Unit / Corpse / Object post-call | `unit` / `thing`; world ones start `watchUnit` / `watchCursor` and remember `startFocus` |
+| driver | follows; `CheckOwner` (seen, then off for 0.1 / 1.5 s, or the frame hidden); interface under the mouse; mouseover gone; cursor over nothing |
+| `UPDATE_MOUSEOVER_UNIT`, `WORLD_CURSOR_TOOLTIP_UPDATE` | a world tooltip left over: leave (hide, or the game's fade) |
+| `OnHide` | watching stopped; `ghost` if it showed a unit or thing; unit, thing, focus cleared |
+| `OnShow` | a ghost (no new owner since) hidden again (with "no fade") |
+
+The two older names stay as `A.Stop` and `A.Fresh`. The timers (`lastX`, `lastY`, `sinceCheck`,
+`sinceUI`, `sinceThing`) belong to the driver, not to a tooltip.
 
 ## Milestone 1 audit (1.5.0 source)
 
@@ -206,3 +218,39 @@ The mock (`tests/mock.lua`) is a stand-in for the client, not the client.
 6. **Units:** hover players (class-coloured name and border) and NPCs (red, yellow or green
    border), in and out of combat, and someone targeting you (">> You <<"). No Lua errors.
 7. `/jtt report`: "hooks: anchor, info, look".
+
+Results (1.6.0 test build): all checks pass.
+
+Milestone 1 verified in game and reviewed.
+
+## Milestone 2 (1.7.0)
+
+| # | Change | Notes |
+|---|---|---|
+| 6 | One lifecycle record | `Anchor.state` replaces nine separate variables. `SetOwner` starts it afresh. Before, "a unit" and "a thing in the world" lasted until the tooltip hid, and the interface frame under the mouse until the next unit, so a bag item's tooltip shown straight after a unit's still counted as a unit's (`/jtt debug` said so). A `gen` number drops checks meant for an earlier tooltip |
+| 7 | Owner tracking | A frame's tooltip is hidden only once the mouse has been over that frame. Before, a tooltip shown for a frame the mouse wasn't on, by an addon or the keyboard, was hidden after 0.1 s. A frame that hides takes its tooltip with it at once (a stale tooltip) |
+| 8 | Original look kept | Blizzard style puts back each tooltip's own border alpha and colour, as found before JTT first touched it, instead of 1 and the default |
+| 9 | Tooltips made after login | Any of ours (a shopping tooltip made later) is styled the first time JTT writes to it (`Look.Adopt`, once per tooltip). Before, only the ones existing at login were styled |
+| 10 | Compatibility diagnostics | A frame after JTT places a tooltip, it checks it's still anchored where JTT put it; moves by something else are counted, with the frame they now hang from. `/jtt compat`, also in `/jtt report`: the other tooltip addons loaded, placements and moves, the styled tooltips, NeedRoll, Auctionator's vendor line, Questie and the source data |
+
+Not changed: when a world tooltip leaves (the checks tuned in 1.3 to 1.4 with `/jtt trace`). They
+read the record now, and behave as before.
+
+### In-game checklist (Milestone 2 → 3)
+
+1. Install 1.7.0 and `/reload`. Tooltips look, sit and leave as in 1.6.0, with no Lua errors.
+2. **World units:** hover an enemy, then move off it onto the ground, then onto your action
+   bars, then onto chat. The tooltip goes each time, as before. `/jtt debug` while hovering shows
+   "unit=true".
+3. **Unit to item:** hover an enemy, then (without moving onto empty ground) a bag item. Then
+   `/jtt debug` on the item: "unit=false".
+4. **Frames:** hover your player frame and an action button; move off: the tooltip goes. A minimap
+   button or addon window whose tooltip shows while you hover stays up while you're on it.
+5. **Ghost:** hover an enemy and move off; the tooltip doesn't come back by itself.
+6. **Look:** switch Look to Blizzard's and back to JTT style. Blizzard's looks exactly like the
+   game's (border visible, its usual colour).
+7. **Compare tooltips:** Shift-hover a bag item to show the comparison tooltips. They're in JTT
+   style.
+8. `/jtt compat`: the other tooltip addons (if any), "N tooltips placed by JTT, 0 moved" in
+   cursor or own-spot mode, styled tooltips, NeedRoll, Auctionator, Questie. With another tooltip
+   addon also moving tooltips, the moves count up.
