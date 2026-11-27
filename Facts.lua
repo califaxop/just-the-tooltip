@@ -194,3 +194,49 @@ function F.InfoLines()
   end
   return L
 end
+
+---------------------------------------------------------------------------
+-- /jtt api (2.0.0): every game function JTT uses, whether this client has it (and under which
+-- name), and how far it's verified (API_COMPATIBILITY.md)
+---------------------------------------------------------------------------
+local DOCS = "Verified by documentation"
+F.APIS = {
+  { "TooltipDataProcessor.AddTooltipPostCall", "lines after the game's", VERIFIED },
+  { "GameTooltip_SetDefaultAnchor", "the cursor, your spot", VERIFIED },
+  { "C_TooltipInfo.GetWorldCursor", "world tooltips that stayed up", VERIFIED },
+  { "GetMouseFoci|GetMouseFocus", "the mouse onto the interface", VERIFIED },
+  { "GetCursorPosition", "following the cursor", VERIFIED },
+  { "C_Item.GetItemInfo|GetItemInfo", "item level, quality, sell price", VERIFIED },
+  { "C_Item.GetItemInfoInstant|GetItemInfoInstant", "an item's kind before it's loaded", VERIFIED },
+  { "C_Item.GetItemQualityByID", "quality border", VERIFIED },
+  { "C_Item.GetItemCount|GetItemCount", "how many you have", VERIFIED },
+  { "UnitGUID", "NPC ID", VERIFIED },
+  { "UnitExists", "units", VERIFIED },
+  { "UnitIsPlayer", "class or reaction colours", VERIFIED },
+  { "UnitClass", "class colours", VERIFIED },
+  { "UnitReaction", "reaction colours", VERIFIED },
+  { "UnitIsTapDenied", "grey when tapped", VERIFIED },
+  { "UnitIsUnit", "\">> You <<\"", VERIFIED },
+  { "UnitName", "the target line", VERIFIED },
+  { "C_SpellBook.IsSpellKnown|IsPlayerSpell", "whether you know a spell", VERIFIED },
+  { "C_ClassColor.GetClassColor", "class colours", DOCS },
+  { "C_AddOns.LoadAddOn|LoadAddOn", "loading the source data", VERIFIED },
+  { "C_AddOns.GetAddOnInfo|GetAddOnInfo", "is the source data installed", DOCS },
+  { "C_AddOns.IsAddOnLoaded|IsAddOnLoaded", "other addons", VERIFIED },
+  { "C_AddOns.GetAddOnMetadata|GetAddOnMetadata", "versions (/jtt compat)", VERIFIED },
+  { "C_Map.GetAreaInfo", "zone names in sources", VERIFIED },
+  { "C_Texture.GetAtlasInfo", "source icons", VERIFIED },
+  { "C_Timer.After", "the placement check", VERIFIED },
+  { "issecretvalue", "values the game hides", VERIFIED },
+}
+function F.ApiLines()
+  local L, missing = {}, 0
+  for _, a in ipairs(F.APIS) do
+    local fn, as = Resolve(a[1])
+    if not fn then missing = missing + 1 end
+    L[#L + 1] = format("%s: %s | %s | %s", a[1]:gsub("|", " or "), fn and ("present" .. (a[1]:find("|", 1, true) and (" as " .. as) or "")) or "|cffff6060missing|r",
+      a[2], a[3])
+  end
+  table.insert(L, 1, format("%d game functions, %d missing on this client", #F.APIS, missing))
+  return L
+end

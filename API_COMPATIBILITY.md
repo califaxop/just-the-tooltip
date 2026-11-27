@@ -81,6 +81,9 @@ values become nil. Since 1.8.0, each information category lists the functions it
 
 ## Testing an API in game
 
+- `/jtt api` (2.0.0): every function above, whether this client has it, and its status.
+- `/jtt lifecycle` (2.0.0): the last tooltips and what closed each.
+
 - `/jtt debug`: what the tooltip is doing now (type, owner, unit, state).
 - `/jtt trace`: what the game says and what JTT does while you hover and leave something.
 - `/jtt report`: version, client, settings, the sources and Questie state, the hooks.

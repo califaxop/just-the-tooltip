@@ -18,8 +18,8 @@ file holds the architecture, conventions, milestone plan and progress.
 | 2 | Tooltip lifecycle and compatibility | Done in 1.7.0, verified in game, reviewed |
 | 3 | Information engine | Done in 1.8.0, verified in game, reviewed |
 | 4 | Customization and presentation | Done in 1.9.0, verified in game, reviewed |
-| 5 | Expanded information and source database | **Done in 1.10.0 (offline); in-game checks pending, then review** |
-| 6 | Diagnostics and release | Not started |
+| 5 | Expanded information and source database | Done in 1.10.0, verified in game, reviewed |
+| 6 | Diagnostics and release | **Done in 2.0.0 (offline); in-game checks pending** |
 
 Each milestone is reviewed before the next starts.
 
@@ -47,7 +47,7 @@ Each milestone is reviewed before the next starts.
 - **Hygiene.** No unused code or settings. Offline tests (`tests/run_tests.py`) cover the logic;
   game behaviour is checked in game (checklists below), never claimed from the tests.
 
-## Architecture (1.10.0)
+## Architecture (2.0.0)
 
 | File | Role |
 |---|---|
@@ -174,6 +174,37 @@ Also in 1.6.0:
 | `TooltipDataProcessor` types Corpse and Object are used without a check that they fire for every corpse and object | Info.lua | M2 |
 | The companion data is tried once a session; turning it on in the AddOns list needs a reload (by design; the reason is now recorded) | Sources.lua `Data` | — |
 
+## Milestone 6 (2.0.0)
+
+| # | Change | Notes |
+|---|---|---|
+| 27 | Lifecycle diagnostics | `Anchor.history`: the last 20 tooltips, each with its owner and anchor, where JTT placed it, what it showed, how long it was up and what ended it. Every hide JTT makes says why ("JTT: the mouse left its frame", "JTT: no unit under the mouse", "JTT: the cursor is over nothing in the world", "JTT: in combat, things in the world are hidden"...); otherwise "the game (or another addon)". A ghost that came back is counted on its tooltip. `/jtt lifecycle` (last 10); the last 5 in `/jtt report` |
+| 28 | Integration diagnostics | `/jtt compat` adds the versions Questie, NeedRoll, Auctionator, FlareUI and EllesmereUI report |
+| 29 | API compatibility report | `Facts.APIS`: the 27 game functions JTT uses, with what each is for and how far it's verified. `/jtt api` shows whether this client has each (and under which name); the summary line is in `/jtt report` |
+| 30 | Every tooltip type | A test runs items, spells, buffs, units, corpses and objects on all six tooltips JTT touches: no category errors, and the right lines on each |
+| 31 | Release checks | `tests/check_release.py`: versions agree (toc, CHANGELOG, README); toc and files match; the data's format is the one the code reads; the data passes `validate.py`; the release zip leaves the developer files out; the tests pass. The release workflow runs `validate.py` before it uploads anything |
+
+## Known limitations (2.0.0)
+
+- Only tooltips the game puts at its default spot move. Tooltips anchored beside a bag slot,
+  window or button stay where the game puts them.
+- Drop order follows Classic 1.12's loot tables (CMaNGOS), which may differ on WoW: Forever, so
+  chances never show on tooltips. NeedRoll's newer dungeon lines replace JTT's where it has them.
+- Sources: up to 12 named per kind and item, the rest counted. NeedRoll names 3 per item.
+- Places come from QuestieDB's first spawn in the zone; creatures with several spawn points show one
+  of them. None inside dungeons.
+- Item levels need the item's data from the server: an item not yet loaded gets its level once the
+  tooltip fills in.
+- "How many you have" includes the bank only after you've opened it this session.
+- In combat the game hides some unit details from addons. Those lines (target, colours, NPC ID)
+  are left out rather than guessed.
+- Pressing the detail key over an open tooltip redraws it where the game allows
+  (`tip:RefreshData`); otherwise the details show on the next hover.
+- Other tooltip addons (TipTac, TinyTooltip, ElvUI...) may also move or restyle tooltips.
+  `/jtt compat` counts tooltips moved after JTT placed them.
+- Duplicate checks read the tooltip's text in English: another addon's item level, target or ID
+  line in another language isn't recognised (both would show).
+
 ## Testing
 
 ### Offline
@@ -183,7 +214,7 @@ pip install lupa
 python3 tests/run_tests.py
 ```
 
-12 tests (1.6.0):
+42 tests (2.0.0), plus the source data validator. By milestone, from 12 tests (1.6.0):
 - The files load.
 - IDs: matched as whole numbers in several wordings, never inside another number or an icon code;
   added once; no error from missing, secret or failing lines.
@@ -416,3 +447,19 @@ Results (1.10.0 test build):
   or the pearl again.
 - 8: item 211527: Quest "This Must Be The Place" (Level 32) and Vendor "Rix Xizzix (Stranglethorn
   Vale 29, 76)", both from Questie.
+
+### In-game checklist (Milestone 6 → release)
+
+1. Install 2.0.0 (both folders) and `/reload`. Everything as in 1.10.0, with no Lua errors.
+2. `/jtt lifecycle` after hovering a few things: an enemy (moved off it), a bag item, an action
+   button, your player frame. Each line: the owner, where it was placed, what it showed, how long
+   it was up and what closed it.
+3. `/jtt api`: "27 game functions, 0 missing on this client" (or which are missing).
+4. `/jtt compat`: "integrations loaded: Questie 12.x, NeedRoll v1.x, ..." with your versions.
+5. **Cursor at every size** (as in M1): Size 60%, 100%, 140%, each corner. The tooltip keeps the
+   same distance from the cursor.
+6. **Every tooltip type:** an item in your bags, a comparison (Shift), an item link and a spell link
+   in chat, a spell on your bars, a buff on you, a player, an NPC, a corpse, a chest or herb.
+   Each has its lines, and no Lua errors.
+7. `/jtt report`: it opens with the line to copy, with the last tooltips and the API summary in it.
+

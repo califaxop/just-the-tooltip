@@ -7,9 +7,11 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 ## Highlights
 - **Position:** the game's spot, **following your cursor** (below-right, below-left, above-right or above-left, at the distance you choose), or your own spot anywhere on screen.
 - **Cursor for the world only (optional):** units and objects follow your cursor, while action bars and buttons keep the game's spot.
-- **IDs:** Item ID and Spell ID on items, spells, buffs and debuffs (not added twice if another addon already shows them).
-- **Item level** on gear.
+- **IDs:** Item ID and Spell ID on items, spells, buffs and debuffs, and optionally NPC IDs on creatures (not added twice if another addon already shows them).
+- **Item level** on gear, and optionally how many of an item you have and what they sell for.
 - **Where gear comes from:** quest rewards, boss and elite drops (with the zone), vendors and chests for your faction, professions and world drops (with their levels), most useful first, up to three lines plus "+N more". Gear that only comes from random-loot chests just says so. The data comes with the download as a small companion addon, "Just the Tooltip!: Sources", that only loads the first time you hover gear. It's refreshed every week.
+- **More detail when you want it (optional):** hold Alt or Ctrl over a tooltip for every source with where it was learned, where in the zone vendors and creatures are, whether you know a spell, and the IDs and counts you've turned off.
+- **Your way:** choose which lines show on the game's tooltip, on chat links and on comparisons, put the lines on items in your own order, and keep several profiles (one per character if you like).
 - **Target line:** who a unit is targeting, with a red ">> You <<" when it's you.
 - **Health bar** under unit tooltips: keep it or turn it off.
 - **Look:** JTT style (a dark panel with a bronze border, FlareUI's when it's installed) or Blizzard's, a border in the item's quality or player's class color (NPCs: red hostile, yellow neutral, green friendly), and a size slider.
@@ -30,7 +32,9 @@ Put the tooltip by your cursor so you never have to look down to the corner of t
 | `/jtt debug` | What the tooltip is doing right now |
 | `/jtt info` | Each kind of information: on or off, available on this client, how far it's verified, any errors |
 | `/jtt source <item>` | Every source known for an item (shift-click it in), where it was learned and how far to trust it |
-| `/jtt compat` | Other tooltip addons, and whether anything moves tooltips after Just the Tooltip! places them |
+| `/jtt compat` | Other tooltip addons and the integrations' versions, and whether anything moves tooltips after Just the Tooltip! places them |
+| `/jtt lifecycle` | The last tooltips: where each was placed, what it showed, and what closed it |
+| `/jtt api` | Every game function Just the Tooltip! uses: present on this client or not, and how far it's verified |
 | `/jtt report` | Bugs & Feedback: the form's link and a line to paste into it |
 
 ## Good to know
@@ -43,6 +47,7 @@ New versions come out every **Wednesday at 12:00 UTC** (8 PM Philippine time, 8 
 Found a bug, have feedback or want a feature? Click **Bugs & Feedback** at the top right of the settings window (or type `/jtt report`): it gives you the form's link and, for a bug, a line to paste into it with everything we need. Or [open an issue](https://github.com/califaxop/just-the-tooltip/issues/new/choose) directly: there's a short form for each.
 
 ## Recent changes
+- **2.0.0:** A thorough rework in six steps, each tested in game. More accurate: IDs matched exactly, item levels only on gear, the cursor distance right at every size, and a unit detail the game hides no longer breaks the tooltip. More reliable: each tooltip starts afresh, tooltips for frames you're not over stay up, comparison tooltips are styled, and Blizzard's look is restored exactly. New: choose where each line shows and in what order, profiles, an optional detail key (every source with where it was learned and where in the zone, whether you know a spell), optional NPC IDs and "You have N (sell for ...)". Sources name up to 12 of each kind, from data rebuilt for the current game build and checked before each release. New commands: `/jtt info`, `/jtt source`, `/jtt compat`, `/jtt lifecycle`, `/jtt api`. Full list: CHANGELOG.md.
 - **1.10.0 (test build):** Optional NPC IDs and "You have N (sell for ...)" on items. Holding the detail key also shows whether you know a spell and, for vendors and creatures out in the world, where in the zone they are. Gear names up to 12 sources of each kind (6 before). Source data rebuilt from the current game build and checked before each release.
 - **1.9.0 (test build):** Choose where each line shows (the game's tooltip, chat links, comparisons) and the order of the lines on items. Optional "more detail" key (Alt or Ctrl): every source with where it was learned. Profiles: several sets of settings, one per character. At 100% size tooltips keep their own size.
 - **1.8.0 (test build):** Each tooltip's details are read once and shared, and each kind of information works on its own: one error no longer affects the rest (new `/jtt info`). An item level or target line another addon already shows isn't repeated. New `/jtt source <item>`: every source for an item, where it was learned and how far to trust it.

@@ -187,7 +187,9 @@ function I.OnUnit(tip, data)
   -- in combat, units in the world can be hidden (hold Shift to see them)
   if ns.db.combatHide and InCombatLockdown() and not IsShiftKeyDown() then
     local owner = tip:GetOwner()
-    if owner == UIParent or owner == WorldFrame or owner == nil then tip:Hide(); return end
+    if owner == UIParent or owner == WorldFrame or owner == nil then
+      ns.Anchor.Ended("JTT: in combat, things in the world are hidden (Shift shows them)"); tip:Hide(); return
+    end
   end
   -- a unit in the world (whatever token the game used for it): watch for the mouse leaving it. First,
   -- before anything that needs to know who it is: the game may keep that secret, and the tooltip

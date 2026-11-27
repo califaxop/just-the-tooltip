@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.0 (the development plan: Milestones 1-6)
+
+The first release of the development plan. 1.6.0 to 1.10.0 below were test builds of its
+milestones (not published); 2.0.0 is all of them, plus Milestone 6:
+
+- New `/jtt lifecycle`: the last tooltips, where each was placed, what it showed, and what closed
+  it (Just the Tooltip!'s reason, or the game).
+- New `/jtt api`: every game function Just the Tooltip! uses, whether this client has it, and how
+  far it's verified.
+- `/jtt compat` shows the versions of Questie, NeedRoll, Auctionator, FlareUI and EllesmereUI.
+- `/jtt report` includes the last tooltips and the API summary.
+- The source data is checked before every release.
+
 ## 1.10.0 (Milestone 5: expanded information and the source data; test build)
 
 - New, off by default: NPC IDs on creatures, and how many of an item you have with what they sell

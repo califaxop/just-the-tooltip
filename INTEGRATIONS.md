@@ -21,6 +21,8 @@ checked before each use, and JTT does without it when a part is missing.
 ## Diagnostics (1.7.0)
 
 `/jtt compat` (also in `/jtt report`) shows:
+- (2.0.0) the versions Questie, NeedRoll, Auctionator, FlareUI and EllesmereUI report, to compare
+  with the versions verified above;
 - the other tooltip addons that are loaded;
 - how many tooltips JTT placed, and how many something else moved afterwards, with the frame each
   now hangs from;

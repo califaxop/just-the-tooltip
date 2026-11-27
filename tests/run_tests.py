@@ -780,6 +780,88 @@ def _():
     assert(NS.Sources.loadState:find("format 3", 1, true) and NS.Sources.loadState:find("update it", 1, true), NS.Sources.loadState)
     """
 
+# ---------------------------------------------------------------------------------------------
+# M6: diagnostics
+# ---------------------------------------------------------------------------------------------
+@test("lifecycle: each tooltip's place, what it showed, and what ended it (JTT's reason or the game); the last 20")
+def _():
+    """
+    NS.db.instantHide, NS.db.anchor = true, "cursor"
+    local T = GameTooltip
+    -- a world unit, hidden by JTT when the unit's gone
+    GameTooltip_SetDefaultAnchor(T, UIParent); T:Show()
+    T.GetUnit = function() return "Defias", "mouseover" end
+    MOCK.units.mouseover = { exists = true }
+    MOCK.Post(Enum.TooltipDataType.Unit, T, {})
+    MOCK.now = MOCK.now + 1.5
+    MOCK.units.mouseover = { exists = false }
+    MOCK.Update(0.06)
+    local r = NS.Anchor.history[#NS.Anchor.history]
+    assert(r.place == "following the cursor" and r.about == "a unit in the world" and r.ended == "JTT: no unit under the mouse", tostring(r.ended))
+    assert(math.abs(r.endedAt - r.at - 1.5) < 1e-6)
+    -- it comes back with nothing new: counted on the same tooltip
+    T:Show()
+    assert(r.ghosts == 1 and not T._shown)
+    -- a bag item the game hides
+    T:SetOwner(MOCK.obj("ContainerFrame1Item1", UIParent), "ANCHOR_RIGHT"); T:Show(); T:Hide()
+    r = NS.Anchor.history[#NS.Anchor.history]
+    assert(r.owner == "ContainerFrame1Item1" and r.anchor == "ANCHOR_RIGHT" and r.ended == "the game (or another addon)")
+    for _ = 1, 30 do T:SetOwner(UIParent, "ANCHOR_NONE") end
+    assert(#NS.Anchor.history == 20, "the last 20")
+    PRINTS = {}
+    SlashCmdList.JUSTTHETOOLTIP("lifecycle")
+    assert(#PRINTS == 10 and PRINTS[1]:find("#", 1, true), tostring(PRINTS[1]))
+    """
+
+@test("/jtt api: every function JTT uses, present or missing, and how far it's verified")
+def _():
+    """
+    UnitGUID = function() end; C_TooltipInfo = { GetWorldCursor = function() end }
+    local L = NS.Facts.ApiLines()
+    assert(L[1]:find("game functions", 1, true))
+    local t = table.concat(L, " / ")
+    assert(t:find("C_Item.GetItemInfo or GetItemInfo: present as C_Item.GetItemInfo | item level, quality, sell price | Verified in WoW Forever", 1, true), t)
+    local missing = tonumber(L[1]:match("(%d+) missing"))
+    UnitGUID = nil
+    assert(tonumber(NS.Facts.ApiLines()[1]:match("(%d+) missing")) == missing + 1, "a missing one counted")
+    PRINTS = {}; SlashCmdList.JUSTTHETOOLTIP("api"); assert(#PRINTS == #L)
+    """
+
+@test("every tooltip type on every tooltip JTT touches: no error, the right lines")
+def _():
+    """
+    MOCK.items[19019] = { level = 80, equipLoc = "INVTYPE_WEAPONMAINHAND", classID = 2, quality = 5 }
+    UnitGUID = function() return "Creature-0-1-0-1-448-01" end
+    NS.db.npcIds = true
+    local tips = { GameTooltip, ItemRefTooltip }
+    for _, n in ipairs({ "ShoppingTooltip1", "ShoppingTooltip2", "ItemRefShoppingTooltip1", "ItemRefShoppingTooltip2" }) do tips[#tips + 1] = MOCK.Tooltip(n) end
+    local E = Enum.TooltipDataType
+    for _, tip in ipairs(tips) do
+      local function has(what) for i = 1, tip:NumLines() do if (_G[tip:GetName() .. "TextLeft" .. i]._text or ""):find(what, 1, true) then return true end end end
+      tip:ClearLines(); tip:AddLine("x"); MOCK.Post(E.Item, tip, { id = 19019 })
+      assert(has("Item ID: 19019") and has("Item level 80"), tip:GetName() .. ": item")
+      tip:ClearLines(); tip:AddLine("x"); MOCK.Post(E.Spell, tip, { id = 403 })
+      assert(has("Spell ID: 403"), tip:GetName() .. ": spell")
+      tip:ClearLines(); tip:AddLine("x"); MOCK.Post(E.UnitAura, tip, { id = 324 })
+      assert(has("Spell ID: 324"), tip:GetName() .. ": aura")
+      tip.GetUnit = function() return "Hogger", "mouseover" end
+      MOCK.units.mouseover = { exists = true, isPlayer = false, reaction = 2 }
+      tip:ClearLines(); tip:AddLine("Hogger"); tip:SetOwner(UIParent); MOCK.Post(E.Unit, tip, {})
+      if tip == GameTooltip then assert(has("NPC ID: 448"), "unit: NPC ID") else assert(not has("NPC ID"), tip:GetName() .. ": units are the game's tooltip only") end
+      MOCK.Post(E.Corpse, tip, {}); MOCK.Post(E.Object, tip, {})
+    end
+    assert(next(NS.Facts.errors) == nil, "no category errored")
+    """
+
+@test("/jtt compat: the versions of the addons JTT works with")
+def _():
+    """
+    C_AddOns = { IsAddOnLoaded = function(n) return n == "Questie" or n == "FlareUI" end,
+      GetAddOnMetadata = function(n) return ({ Questie = "12.15.0", FlareUI = "3.2" })[n] end }
+    local t = table.concat(NS.CompatLines(), " / ")
+    assert(t:find("integrations loaded: Questie 12.15.0, FlareUI 3.2", 1, true), t)
+    """
+
 
 def _validator():
     global count

@@ -85,6 +85,14 @@ function ns.CompatLines()
   for tip in pairs(ns.Look.adopted) do names[#names + 1] = ns.Safe(tip.GetName, tip) or "?" end
   table.sort(names)
   L[#L + 1] = format("look: %s style; styled tooltips: %s", ns.db.look == "addon" and "JTT" or "Blizzard's", table.concat(names, ", "))
+  -- (2.0.0) the versions of the addons JTT works with, as they report them
+  local meta = ns.Facts.Resolve("C_AddOns.GetAddOnMetadata|GetAddOnMetadata")
+  local ver = {}
+  for _, name in ipairs({ "Questie", "NeedRoll", "Auctionator", "FlareUI", "EllesmereUI" }) do
+    local loaded = (C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded(name)) or (IsAddOnLoaded and IsAddOnLoaded(name))
+    if loaded then ver[#ver + 1] = name .. " " .. tostring(ns.Safe(meta, name, "Version") or "?") end
+  end
+  L[#L + 1] = "integrations loaded: " .. (#ver > 0 and table.concat(ver, ", ") or "none")
   local nr = ns.Sources.NeedRollLoaded()
   L[#L + 1] = format("NeedRoll: %s; Auctionator's vendor line: %s; Questie: %s; source data: %s",
     nr and (ns.Sources.Holding() and "loaded, its lines shown JTT's way" or "loaded, its own lines") or "not loaded",
@@ -100,6 +108,10 @@ SlashCmdList.JUSTTHETOOLTIP = function(msg)
     ns.db.anchor = "custom"; ns.Anchor.Unlock(not ns.Anchor.unlocked)
   elseif cmd == "debug" then
     ns.Anchor.Debug()
+  elseif cmd == "lifecycle" then
+    for _, l in ipairs(ns.Anchor.LifecycleLines(10)) do ns.Print(l) end
+  elseif cmd == "api" then
+    for _, l in ipairs(ns.Facts.ApiLines()) do ns.Print(l) end
   elseif cmd == "info" then
     for _, l in ipairs(ns.Facts.InfoLines()) do ns.Print(l) end
   elseif cmd == "source" or cmd == "sources" then

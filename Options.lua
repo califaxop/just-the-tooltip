@@ -236,6 +236,8 @@ local function BugReport()
     yes(type(FlareUI) == "table"), yes(UI.HasEllesmere()))
   for _, l in ipairs(ns.CompatLines()) do L[#L + 1] = l end
   for _, l in ipairs(ns.Facts.InfoLines()) do L[#L + 1] = l end
+  L[#L + 1] = ns.Facts.ApiLines()[1]
+  for _, l in ipairs(ns.Anchor.LifecycleLines(5)) do L[#L + 1] = "tooltip " .. l end
   local hooks = {}
   for k in pairs(ns.hooks) do hooks[#hooks + 1] = k end
   table.sort(hooks)

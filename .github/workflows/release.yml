@@ -57,6 +57,13 @@ jobs:
           fi
           echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
 
+      - name: Check the source data
+        if: steps.check.outputs.release == 'yes'
+        run: |
+          # (2.0.0) the companion's data must pass its validator before anything is uploaded
+          python3 -m pip install --quiet lupa
+          python3 tools/sources/validate.py
+
       - name: Build the zip
         if: steps.check.outputs.release == 'yes'
         run: |
