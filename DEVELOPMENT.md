@@ -15,7 +15,7 @@ file holds the architecture, conventions, milestone plan and progress.
 | # | Milestone | Status |
 |---|---|---|
 | 1 | Tooltip accuracy and reliability | Done in 1.6.0, verified in game, reviewed |
-| 2 | Tooltip lifecycle and compatibility | **Done in 1.7.0 (offline); in-game checks pending, then review** |
+| 2 | Tooltip lifecycle and compatibility | **Done in 1.7.0, verified in game, waiting for review** |
 | 3 | Information engine | Not started |
 | 4 | Customization and presentation | Not started |
 | 5 | Expanded information and source database | Not started |
@@ -254,3 +254,16 @@ read the record now, and behave as before.
 8. `/jtt compat`: the other tooltip addons (if any), "N tooltips placed by JTT, 0 moved" in
    cursor or own-spot mode, styled tooltips, NeedRoll, Auctionator, Questie. With another tooltip
    addon also moving tooltips, the moves count up.
+
+Results (1.7.0 test build):
+- 2: hovering an enemy (cursor mode): "tooltip #6: unit=true following=true mouseover=true
+  cursor=true".
+- 3: a bag item after an enemy: "tooltip #28: unit=false thing=false following=false mouseover=false
+  cursor=false" (a new record; the mouseover unit reads "?" over the bags: hidden from addons there).
+- 4-7: pass.
+- 8: no other tooltip addons; 95 tooltips placed by JTT, 0 moved by something else; styled:
+  GameTooltip, ItemRefTooltip, ShoppingTooltip1/2, ItemRefShoppingTooltip1/2; NeedRoll loaded (its
+  lines shown JTT's way); Auctionator's vendor line off for the session; Questie ready; source
+  data loaded.
+
+Milestone 2 verified in game; awaiting review before Milestone 3.
