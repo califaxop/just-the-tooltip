@@ -16,7 +16,7 @@ file holds the architecture, conventions, milestone plan and progress.
 |---|---|---|
 | 1 | Tooltip accuracy and reliability | Done in 1.6.0, verified in game, reviewed |
 | 2 | Tooltip lifecycle and compatibility | Done in 1.7.0, verified in game, reviewed |
-| 3 | Information engine | **Done in 1.8.0 (offline); in-game checks pending, then review** |
+| 3 | Information engine | **Done in 1.8.0, verified in game, waiting for review** |
 | 4 | Customization and presentation | Not started |
 | 5 | Expanded information and source database | Not started |
 | 6 | Diagnostics and release | Not started |
@@ -292,3 +292,15 @@ Milestone 2 verified in game and reviewed.
 5. **Units:** players and NPCs as before (class colours, reaction borders, ">> You <<").
 6. With another tooltip addon that shows item level or a target line (if you use one), neither
    appears twice.
+
+Results (1.8.0 test build):
+- 2: six categories, all "on; available; Verified in WoW Forever", no errors.
+- 3, 5, 6: pass.
+- 4: `/jtt source` on item 7721: "2 sources known (data: loaded; Questie: ready)": High Inquisitor
+  Whitemane - Scarlet Monastery from JTT's data ("listed by Classic 1.12 drop chance (not
+  Forever's) | Classic 1.12 chance 20%"), and High Inquisitor Whitemane - Scarlet Monastery:
+  Cathedral from NeedRoll ("NeedRoll's loot tables (newer than JTT's)"). On the tooltip NeedRoll's
+  line replaces JTT's for that dungeon (the merge in `Sources.Add`). `/jtt source` lists both
+  without saying which one the tooltip shows; noted for Milestone 4's detailed view.
+
+Milestone 3 verified in game; awaiting review before Milestone 4.
