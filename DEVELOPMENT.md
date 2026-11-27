@@ -17,7 +17,7 @@ file holds the architecture, conventions, milestone plan and progress.
 | 1 | Tooltip accuracy and reliability | Done in 1.6.0, verified in game, reviewed |
 | 2 | Tooltip lifecycle and compatibility | Done in 1.7.0, verified in game, reviewed |
 | 3 | Information engine | Done in 1.8.0, verified in game, reviewed |
-| 4 | Customization and presentation | **Done in 1.9.0 (offline); in-game checks pending, then review** |
+| 4 | Customization and presentation | **Done in 1.9.0, verified in game, waiting for review** |
 | 5 | Expanded information and source database | Not started |
 | 6 | Diagnostics and release | Not started |
 
@@ -361,3 +361,10 @@ Results (1.9.0 test build):
   replaces it". Pass.
 - 8: pass ("profile: shared; item line order: itemLevel, sources, itemId; detail key: ALT; lines
   turned off on: none").
+- Rechecks: 2 (a spell link hovered in chat, Spell ID off for chat links): no Spell ID. 4: Small
+  Lustrous Pearl with Alt: every source tagged "(Questie)", then "+12 more: 12 ... names up to 6 of
+  each kind". The wording said "JTT's data" though these came from Questie (the cap of 6 applies
+  to both). Now "not named (Just the Tooltip! names up to 6 of each kind)". Item ID shown with Alt
+  while turned off: pass.
+
+Milestone 4 verified in game; awaiting review before Milestone 5.

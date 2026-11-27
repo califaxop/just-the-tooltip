@@ -614,7 +614,7 @@ function S.Add(tip, id, detail)
     if detail then
       -- (1.9.0) every named source is shown: what's left is only counted where it came from
       local why = {}
-      if unnamedData > 0 then why[#why + 1] = format("%d JTT's data counts but doesn't name (it names up to 6 of each kind)", unnamedData) end
+      if unnamedData > 0 then why[#why + 1] = format("%d not named (Just the Tooltip! names up to 6 of each kind)", unnamedData) end
       if unnamedNR > 0 then why[#why + 1] = format("%d NeedRoll counts but doesn't name (it names 3)", unnamedNR) end
       tip:AddLine("  " .. GREY .. format("+%d more: %s", more, table.concat(why, "; ")) .. "|r", nil, nil, nil, true)
     else

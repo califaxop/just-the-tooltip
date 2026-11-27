@@ -621,7 +621,7 @@ def _():
     JustTheTooltipSources.items[601] = "d1,2,3,4,5+4"
     T:ClearLines(); T:AddLine("x")
     MOCK.Post(Enum.TooltipDataType.Item, T, { id = 601 })
-    assert(text():find("+4 more: 4 JTT's data counts but doesn't name (it names up to 6 of each kind)", 1, true), text())
+    assert(text():find("+4 more: 4 not named (Just the Tooltip! names up to 6 of each kind)", 1, true), text())
     -- pressing the key over a shown tooltip shows it again (RefreshData)
     local refreshed = 0
     T.RefreshData = function() refreshed = refreshed + 1 end
