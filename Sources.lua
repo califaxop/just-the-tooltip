@@ -587,8 +587,12 @@ function S.Add(tip, id, detail)
       more = more + 1
     end
   end
+  local unnamedData, unnamedNR = 0, 0 -- (sources only counted: the data's and NeedRoll's)
   for k, n in pairs(extra) do
-    if not (nrDrops and k == "d") then more = more + n end -- (NeedRoll counts its own drops)
+    if not (nrDrops and k == "d") then -- (NeedRoll counts its own drops)
+      more = more + n
+      if k == "nr" then unnamedNR = unnamedNR + n else unnamedData = unnamedData + n end
+    end
   end
   if #show == 0 and more == 0 then return end
   -- just one: on the heading line ("Source: [chest] Random chests and containers")
@@ -606,5 +610,15 @@ function S.Add(tip, id, detail)
   for _, l in ipairs(show) do
     tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. (detail and Tag(l) or ""), GREY .. l.right .. "|r")
   end
-  if more > 0 then tip:AddLine("  " .. GREY .. format("+%d more source%s", more, more == 1 and "" or "s") .. "|r") end
+  if more > 0 then
+    if detail then
+      -- (1.9.0) every named source is shown: what's left is only counted where it came from
+      local why = {}
+      if unnamedData > 0 then why[#why + 1] = format("%d JTT's data counts but doesn't name (it names up to 6 of each kind)", unnamedData) end
+      if unnamedNR > 0 then why[#why + 1] = format("%d NeedRoll counts but doesn't name (it names 3)", unnamedNR) end
+      tip:AddLine("  " .. GREY .. format("+%d more: %s", more, table.concat(why, "; ")) .. "|r", nil, nil, nil, true)
+    else
+      tip:AddLine("  " .. GREY .. format("+%d more source%s", more, more == 1 and "" or "s") .. "|r")
+    end
+  end
 end

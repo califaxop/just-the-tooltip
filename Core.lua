@@ -126,10 +126,23 @@ function ns.DeleteProfile(name)
 end
 
 -- the kind of tooltip, for "where each line shows": main, ref (a chat link), compare
+-- (a link hovered in the chat window shows the game's tooltip, owned by the chat frame: that's a
+-- chat link too)
+local function InChat(tip)
+  local f = tip.GetOwner and ns.Safe(tip.GetOwner, tip)
+  for _ = 1, 6 do
+    if type(f) ~= "table" then return false end
+    local n = ns.Safe(f.GetName, f)
+    if type(n) == "string" and n:find("^ChatFrame%d") then return true end
+    f = ns.Safe(f.GetParent, f)
+  end
+  return false
+end
 function ns.TipKind(tip)
   if tip == ItemRefTooltip then return "ref" end
   local name = tip and tip.GetName and tip:GetName()
   if type(name) == "string" and (name:find("^ShoppingTooltip%d") or name:find("^ItemRefShoppingTooltip%d")) then return "compare" end
+  if tip == GameTooltip and InChat(tip) then return "ref" end
   return "main"
 end
 function ns.ShowsOn(line, kind)

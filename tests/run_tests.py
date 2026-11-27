@@ -559,6 +559,15 @@ def _():
     ItemRefTooltip:ClearLines(); ItemRefTooltip:AddLine("x")
     MOCK.Post(Enum.TooltipDataType.Spell, ItemRefTooltip, { id = 5 })
     assert(not has(ItemRefTooltip, "Spell ID"), "a spell's chat link: off")
+    -- a chat link hovered (the game's tooltip, owned by the chat window): a chat link too
+    local chat = MOCK.obj("ChatFrame1", UIParent)
+    local inner = MOCK.obj(nil, chat)
+    T:ClearLines(); T:AddLine("x"); T:SetOwner(inner, "ANCHOR_CURSOR")
+    MOCK.Post(Enum.TooltipDataType.Spell, T, { id = 5 })
+    assert(not has(T, "Spell ID"), "hovered in chat: counts as a chat link")
+    T:ClearLines(); T:AddLine("x"); T:SetOwner(UIParent, "ANCHOR_CURSOR")
+    MOCK.Post(Enum.TooltipDataType.Spell, T, { id = 5 })
+    assert(has(T, "Spell ID: 5"), "elsewhere: the game's")
     """
 
 @test("where each line shows: the settings' boxes tick off and on again (1.9.0's untick turned it straight back on)")
@@ -608,6 +617,11 @@ def _():
     assert(t:find("Item ID: 600", 1, true) and not t:find("more", 1, true), "held: " .. t)
     local n = 0 for _ in t:gmatch("%(JTT data%)") do n = n + 1 end
     assert(n == 5, "five tagged: " .. n)
+    -- sources the data only counts (it names up to 6): said so, held
+    JustTheTooltipSources.items[601] = "d1,2,3,4,5+4"
+    T:ClearLines(); T:AddLine("x")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 601 })
+    assert(text():find("+4 more: 4 JTT's data counts but doesn't name (it names up to 6 of each kind)", 1, true), text())
     -- pressing the key over a shown tooltip shows it again (RefreshData)
     local refreshed = 0
     T.RefreshData = function() refreshed = refreshed + 1 end

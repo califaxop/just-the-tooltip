@@ -346,3 +346,18 @@ the lines on items" (Up / Down), "More detail" and "Profiles".
 7. `/jtt source` on item 7721 (Whitemane): JTT's line says NeedRoll's newer line replaces it on
    the tooltip.
 8. `/jtt report`: "profile: ...; item line order: ...; detail key: ...; lines turned off on: ...".
+
+Results (1.9.0 test build):
+- 2: comparisons without Item ID, the item's own with it: pass. A spell link hovered in chat still
+  showed its Spell ID with "Chat links" off: the hover shows the game's own tooltip (owned by the
+  chat window), not the chat-link one. Changed: a tooltip owned by a chat frame counts as a chat
+  link (`ns.TipKind`). Recheck.
+- 3, 5, 6: pass.
+- 4: Alt showed one extra line on some gear with more sources. Every named source shows; the rest
+  are only counted. The data names up to 6 creatures, vendors or chests per kind (MAX_IDS in
+  build.py), and NeedRoll names 3 per item. Changed: with the key held, the "+N more" line says
+  which of the two counts it. Naming more in the data is Milestone 5 (source data). Recheck.
+- 7: item 7720: JTT's Whitemane line "not on the tooltip: NeedRoll's newer line for this dungeon
+  replaces it". Pass.
+- 8: pass ("profile: shared; item line order: itemLevel, sources, itemId; detail key: ALT; lines
+  turned off on: none").
