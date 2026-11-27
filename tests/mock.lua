@@ -77,6 +77,8 @@ GetCursorPosition = function() return MOCK.cursor[1], MOCK.cursor[2] end
 GetTime = function() return MOCK.now end
 InCombatLockdown = function() return false end
 IsShiftKeyDown = function() return false end
+IsAltKeyDown = function() return MOCK.alt or false end
+IsControlKeyDown = function() return MOCK.ctrl or false end
 
 -- units: MOCK.units[token] = { exists, isPlayer, class, reaction, name, isMe, err }
 local function U(token, key)

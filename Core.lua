@@ -46,6 +46,11 @@ ns.DEFAULTS = {
   healthBar = true,       -- the health bar under unit tooltips
   combatHide = false,     -- hide tooltips for things in the world during combat (Shift shows them)
   instantHide = true,     -- world tooltips vanish when you stop hovering (no fade)
+  -- (1.9.0) which tooltips each line shows on: where[line][tooltip] = false turns it off there
+  -- (missing = on). Tooltips: main (the game's), ref (chat links), compare (comparisons).
+  where = {},
+  itemOrder = { "itemLevel", "sources", "itemId" }, -- the order of JTT's lines on items
+  detailKey = "none",     -- "none", "ALT", "CTRL": held, tooltips show every detail (all sources, where each was learned)
 }
 
 local function Copy(v)
@@ -56,12 +61,114 @@ local function Copy(v)
 end
 ns.Copy = Copy
 
-function ns.LoadDB()
-  JustTheTooltipDB = JustTheTooltipDB or {}
+local function Fill(t)
   for k, v in pairs(ns.DEFAULTS) do
-    if JustTheTooltipDB[k] == nil then JustTheTooltipDB[k] = Copy(v) end
+    if t[k] == nil then t[k] = Copy(v) end
   end
-  ns.db = JustTheTooltipDB
+  return t
+end
+
+-- Profiles (1.9.0). The settings at the top of JustTheTooltipDB are the shared ones, as in every
+-- earlier version, used by every character that hasn't picked a profile. Named profiles are kept in
+-- JustTheTooltipDB.profiles[name], each a full, independent set of settings. A character's choice is
+-- JustTheTooltipCharDB.profile (nil: the shared settings). ns.db is whichever is in use.
+function ns.LoadDB()
+  JustTheTooltipDB = Fill(JustTheTooltipDB or {})
+  if type(JustTheTooltipDB.profiles) ~= "table" then JustTheTooltipDB.profiles = {} end
+  JustTheTooltipCharDB = type(JustTheTooltipCharDB) == "table" and JustTheTooltipCharDB or {}
+  local name = JustTheTooltipCharDB.profile
+  local p = type(name) == "string" and JustTheTooltipDB.profiles[name]
+  if type(p) == "table" then
+    ns.db = Fill(p)
+  else
+    JustTheTooltipCharDB.profile = nil -- (a profile deleted on another character: back to shared)
+    ns.db = JustTheTooltipDB
+  end
+end
+function ns.ProfileName() return JustTheTooltipCharDB and JustTheTooltipCharDB.profile end
+function ns.ProfileNames()
+  local t = {}
+  for n in pairs(JustTheTooltipDB.profiles) do t[#t + 1] = n end
+  table.sort(t)
+  return t
+end
+-- after the settings in use changed (another profile): everything that follows them, again
+function ns.ApplySettings()
+  if ns.Anchor then ns.Anchor.PlaceSpot() end
+  if ns.Sources then ns.Sources.Hold() end
+  if ns.Info then ns.Info.ApplyHealthBar() end
+  if ns.Look then ns.Look.Refresh() end
+  if ns.RefreshOptions then ns.RefreshOptions() end
+end
+-- use a profile on this character (nil: the shared settings)
+function ns.UseProfile(name)
+  if name ~= nil and type(JustTheTooltipDB.profiles[name]) ~= "table" then return false end
+  JustTheTooltipCharDB.profile = name
+  ns.LoadDB()
+  ns.ApplySettings()
+  return true
+end
+-- a new profile: a copy of the settings in use, then used on this character
+function ns.NewProfile(name)
+  name = type(name) == "string" and name:gsub("^%s+", ""):gsub("%s+$", "") or ""
+  if name == "" or JustTheTooltipDB.profiles[name] then return false end
+  local t = {}
+  for k in pairs(ns.DEFAULTS) do t[k] = Copy(ns.db[k]) end
+  JustTheTooltipDB.profiles[name] = t
+  return ns.UseProfile(name)
+end
+-- delete a profile; a character using it goes back to the shared settings
+function ns.DeleteProfile(name)
+  if type(JustTheTooltipDB.profiles[name]) ~= "table" then return false end
+  JustTheTooltipDB.profiles[name] = nil
+  if ns.ProfileName() == name then ns.UseProfile(nil) end
+  return true
+end
+
+-- the kind of tooltip, for "where each line shows": main, ref (a chat link), compare
+function ns.TipKind(tip)
+  if tip == ItemRefTooltip then return "ref" end
+  local name = tip and tip.GetName and tip:GetName()
+  if type(name) == "string" and (name:find("^ShoppingTooltip%d") or name:find("^ItemRefShoppingTooltip%d")) then return "compare" end
+  return "main"
+end
+function ns.Shows(line, tip)
+  local w = type(ns.db.where) == "table" and ns.db.where[line]
+  return not (type(w) == "table" and w[ns.TipKind(tip)] == false)
+end
+
+-- the item lines in the order chosen: every line once (an old, damaged or missing order still works)
+ns.ITEM_LINES = { "itemLevel", "sources", "itemId" }
+function ns.ItemOrder()
+  local out, seen = {}, {}
+  local known = {}
+  for _, k in ipairs(ns.ITEM_LINES) do known[k] = true end
+  for _, k in ipairs(type(ns.db.itemOrder) == "table" and ns.db.itemOrder or {}) do
+    if known[k] and not seen[k] then out[#out + 1] = k; seen[k] = true end
+  end
+  for _, k in ipairs(ns.ITEM_LINES) do if not seen[k] then out[#out + 1] = k end end
+  return out
+end
+function ns.MoveItemLine(key, d)
+  local o = ns.ItemOrder()
+  for i, k in ipairs(o) do
+    if k == key then
+      local j = i + d
+      if j < 1 or j > #o then return false end
+      o[i], o[j] = o[j], o[i]
+      ns.db.itemOrder = o
+      return true
+    end
+  end
+  return false
+end
+
+-- the detail key held now (1.9.0)
+function ns.Detail()
+  local k = ns.db and ns.db.detailKey
+  if k == "ALT" then return IsAltKeyDown and IsAltKeyDown() and true or false end
+  if k == "CTRL" then return IsControlKeyDown and IsControlKeyDown() and true or false end
+  return false
 end
 
 -- the tooltips we touch: the game's main ones only (never other addons' hidden scanning tooltips)

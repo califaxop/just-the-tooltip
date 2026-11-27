@@ -34,6 +34,11 @@ values become nil. Since 1.8.0, each information category lists the functions it
 | `tip.NineSlice:GetBorderColor()` | the border's own colour, put back in Blizzard style (1.7.0) | Inferred; read through `ns.Safe` (missing: the game's default colour) |
 | `C_Timer.After(0, fn)` | the placement check a frame later | Verified in WoW Forever |
 
+| `MODIFIER_STATE_CHANGED(key, down)` ("LALT", "RCTRL"...) | the detail key pressed or let go (1.9.0) | Verified by documentation; in-game check 4 (1.9.0) |
+| `IsAltKeyDown()`, `IsControlKeyDown()` | is the detail key held | Verified by documentation; in use in many addons |
+| `tip:RefreshData()` | show a tooltip again with or without the details | Inferred (the 10.x+ tooltip data system); read through `ns.Safe`, and the details otherwise show on the next hover. In-game check 4 |
+| `## SavedVariablesPerCharacter: JustTheTooltipCharDB` | this character's profile (1.9.0) | Verified in WoW Forever (Hereabouts' HereaboutsCharDB works the same way) |
+
 ## Positioning
 
 | API | Use | Status |

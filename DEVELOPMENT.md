@@ -16,8 +16,8 @@ file holds the architecture, conventions, milestone plan and progress.
 |---|---|---|
 | 1 | Tooltip accuracy and reliability | Done in 1.6.0, verified in game, reviewed |
 | 2 | Tooltip lifecycle and compatibility | Done in 1.7.0, verified in game, reviewed |
-| 3 | Information engine | **Done in 1.8.0, verified in game, waiting for review** |
-| 4 | Customization and presentation | Not started |
+| 3 | Information engine | Done in 1.8.0, verified in game, reviewed |
+| 4 | Customization and presentation | **Done in 1.9.0 (offline); in-game checks pending, then review** |
 | 5 | Expanded information and source database | Not started |
 | 6 | Diagnostics and release | Not started |
 
@@ -47,7 +47,7 @@ Each milestone is reviewed before the next starts.
 - **Hygiene.** No unused code or settings. Offline tests (`tests/run_tests.py`) cover the logic;
   game behaviour is checked in game (checklists below), never claimed from the tests.
 
-## Architecture (1.8.0)
+## Architecture (1.9.0)
 
 | File | Role |
 |---|---|
@@ -303,4 +303,41 @@ Results (1.8.0 test build):
   line replaces JTT's for that dungeon (the merge in `Sources.Add`). `/jtt source` lists both
   without saying which one the tooltip shows; noted for Milestone 4's detailed view.
 
-Milestone 3 verified in game; awaiting review before Milestone 4.
+Milestone 3 verified in game and reviewed.
+
+## Milestone 4 (1.9.0)
+
+| # | Change | Notes |
+|---|---|---|
+| 15 | Where each line shows | `where[line][tooltip] = false` turns a line off on one kind of tooltip: the game's (`main`), chat links (`ref`), comparisons (`compare`); `ns.TipKind`, `ns.Shows`. Missing means on, so older settings show everything as before. Lines: Item ID, Spell ID (not on comparisons: they're items), Item level, Where gear comes from |
+| 16 | Order of the item lines | `itemOrder`; `ns.ItemOrder()` always gives every line once (old, damaged or missing orders work); `ns.MoveItemLine`. Default as before: Item level, sources, Item ID |
+| 17 | More detail | `detailKey`: Off (default: the lightweight tooltip), Alt or Ctrl. Held over a tooltip, it shows every source with no "+N more", each tagged with where it was learned (JTT data, Questie, NeedRoll; "Classic order" for drops ordered by Classic 1.12 chances), and IDs and item level even where turned off. Pressing or letting go of the key over a shown tooltip shows it again (`MODIFIER_STATE_CHANGED`, `tip:RefreshData`) |
+| 18 | Style restoration | At 100% size a tooltip keeps its own scale, as found before JTT first touched it (another addon may size it); another size is applied as before. Adds to 1.7.0's border alpha and colour |
+| 19 | Profiles | The settings at the top of `JustTheTooltipDB` are the shared ones (every earlier version's, unchanged). Named profiles are kept in `JustTheTooltipDB.profiles`, each a whole independent set. A character's choice is in `JustTheTooltipCharDB.profile` (new, per character; nil means shared). New (a copy of the settings in use), switch, delete (a character using it goes back to shared, at once or at its next login) |
+| 20 | `/jtt source` | Says which of JTT's drop lines NeedRoll's newer line replaces on the tooltip (noted in M3's results) |
+
+The settings window has a second column for these: "Where each line shows" (a grid), "Order of
+the lines on items" (Up / Down), "More detail" and "Profiles".
+
+### In-game checklist (Milestone 4 → 5)
+
+1. Install 1.9.0 and `/reload`. Your settings and tooltips are as in 1.8.0, with no Lua errors. The
+   settings window has a second column.
+2. **Where each line shows:** untick Item ID under Comparisons. Shift-hover a bag item: no Item ID
+   on the comparison tooltips, still there on the item's own. Untick Spell ID under Chat links and
+   click a spell link in chat: no Spell ID.
+3. **Order:** move "Item ID" to the top. Hover gear: the ID comes first, then level and sources.
+4. **More detail:** pick "While holding Alt".
+   - Hover gear with more than three sources, then hold Alt over it. Every source shows, each with
+     "(JTT data)", "(Questie)" or "(NeedRoll)", and drops with "Classic order". Let go: the usual
+     three and "+N more".
+   - Untick Item ID, hold Alt: the ID shows.
+5. **Size:** at 100% tooltips look as before; at 120% bigger; back to 100%, as before.
+6. **Profiles:**
+   - Type a name, "New profile": "This character uses: <name>".
+   - Change something (Size 80%), then click < until "Shared": the old size is back.
+   - Log on another character: it uses Shared.
+   - Back on the first character, "Delete this profile": Shared.
+7. `/jtt source` on item 7721 (Whitemane): JTT's line says NeedRoll's newer line replaces it on
+   the tooltip.
+8. `/jtt report`: "profile: ...; item line order: ...; detail key: ...; lines turned off on: ...".

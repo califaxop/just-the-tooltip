@@ -538,6 +538,132 @@ def _():
     assert(PRINTS[1] and PRINTS[1]:find("item 500", 1, true))
     """
 
+# ---------------------------------------------------------------------------------------------
+# M4: customization and presentation
+# ---------------------------------------------------------------------------------------------
+@test("where each line shows: a line turned off on comparisons or chat links stays on the game's tooltip")
+def _():
+    """
+    MOCK.items[19019] = { level = 80, equipLoc = "INVTYPE_WEAPONMAINHAND", classID = 2 }
+    NS.db.where.itemId = { compare = false }
+    NS.db.where.spellId = { ref = false }
+    local cmp = MOCK.Tooltip("ShoppingTooltip1")
+    cmp:AddLine("x"); MOCK.Post(Enum.TooltipDataType.Item, cmp, { id = 19019 })
+    local function has(tip, what)
+      for i = 1, tip:NumLines() do if (_G[tip:GetName() .. "TextLeft" .. i]._text or ""):find(what, 1, true) then return true end end
+    end
+    assert(not has(cmp, "Item ID") and has(cmp, "Item level 80"), "comparison: no ID, the level still")
+    local T = GameTooltip; T:ClearLines(); T:AddLine("x")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 19019 })
+    assert(has(T, "Item ID: 19019"), "the game's tooltip: the ID")
+    ItemRefTooltip:ClearLines(); ItemRefTooltip:AddLine("x")
+    MOCK.Post(Enum.TooltipDataType.Spell, ItemRefTooltip, { id = 5 })
+    assert(not has(ItemRefTooltip, "Spell ID"), "a spell's chat link: off")
+    """
+
+@test("order: the item lines in the order chosen; an old or damaged order still has every line once")
+def _():
+    """
+    MOCK.items[19019] = { level = 80, equipLoc = "INVTYPE_WEAPONMAINHAND", classID = 2 }
+    JustTheTooltipSources = { items = { [19019] = "c164" }, quests = {}, npcs = {}, objects = {}, instances = {}, skills = { [164] = "Blacksmithing" } }
+    NS.db.itemOrder = { "itemId", "itemLevel", "sources" }
+    local T = GameTooltip; T:ClearLines(); T:AddLine("x")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 19019 })
+    assert(GameTooltipTextLeft2._text:find("Item ID", 1, true) and GameTooltipTextLeft3._text:find("Item level", 1, true)
+      and GameTooltipTextLeft4._text:find("Source", 1, true))
+    NS.db.itemOrder = { "itemId", "nonsense", "itemId" }
+    local o = NS.ItemOrder()
+    assert(#o == 3 and o[1] == "itemId" and o[2] == "itemLevel" and o[3] == "sources")
+    NS.db.itemOrder = nil
+    assert(#NS.ItemOrder() == 3, "missing: the default order")
+    assert(NS.MoveItemLine("sources", -1) and NS.ItemOrder()[1] == "sources" and not NS.MoveItemLine("sources", -1), "moved up; first can't go higher")
+    """
+
+@test("detail key: held, every source tagged with where it came from, and IDs even when off; let go, the usual three")
+def _():
+    """
+    JustTheTooltipSources = { items = { [600] = "d1,2,3,4,5" }, quests = {},
+      npcs = { [1] = "A|5|5|0|12|", [2] = "B|5|5|0|12|", [3] = "C|5|5|0|12|", [4] = "D|5|5|0|12|", [5] = "E|5|5|0|12|" },
+      objects = {}, instances = {} }
+    NS.db.detailKey, NS.db.ids = "ALT", false
+    local T = GameTooltip
+    local function text() local t = {} for i = 1, T:NumLines() do t[#t + 1] = _G["GameTooltipTextLeft" .. i]._text or "" end return table.concat(t, " / ") end
+    T:ClearLines(); T:AddLine("x")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 600 })
+    assert(not text():find("Item ID", 1, true) and text():find("+2 more", 1, true) and not text():find("JTT data", 1, true), "not held: " .. text())
+    MOCK.alt = true
+    T:ClearLines(); T:AddLine("x")
+    MOCK.Post(Enum.TooltipDataType.Item, T, { id = 600 })
+    local t = text()
+    assert(t:find("Item ID: 600", 1, true) and not t:find("more", 1, true), "held: " .. t)
+    local n = 0 for _ in t:gmatch("%(JTT data%)") do n = n + 1 end
+    assert(n == 5, "five tagged: " .. n)
+    -- pressing the key over a shown tooltip shows it again (RefreshData)
+    local refreshed = 0
+    T.RefreshData = function() refreshed = refreshed + 1 end
+    T:Show()
+    MOCK.Fire("MODIFIER_STATE_CHANGED", "LALT", 1)
+    MOCK.Fire("MODIFIER_STATE_CHANGED", "LSHIFT", 1)
+    assert(refreshed == 1, "only for the detail key: " .. refreshed)
+    """
+
+SAVED_OLD = """
+JustTheTooltipDB = { anchor = "cursor", scale = 1.2, ids = false }
+"""
+
+@test("profiles: older saved settings are the shared ones; a profile is independent; per character; deleting one goes back to shared", pre=SAVED_OLD)
+def _():
+    """
+    assert(NS.db == JustTheTooltipDB and NS.db.anchor == "cursor" and NS.db.scale == 1.2 and NS.db.ids == false, "1.8.0's settings kept, shared")
+    assert(NS.db.where and NS.db.detailKey == "none", "new settings filled")
+    assert(NS.NewProfile("Raid") and NS.ProfileName() == "Raid" and JustTheTooltipCharDB.profile == "Raid")
+    assert(NS.db ~= JustTheTooltipDB and NS.db.anchor == "cursor", "a copy of the settings in use")
+    NS.db.scale = 0.8
+    assert(JustTheTooltipDB.scale == 1.2, "the shared settings untouched")
+    NS.UseProfile(nil); assert(NS.db.scale == 1.2 and NS.ProfileName() == nil)
+    NS.UseProfile("Raid"); assert(NS.db.scale == 0.8)
+    assert(not NS.NewProfile("Raid") and not NS.NewProfile("  "), "taken or empty: refused")
+    assert(not NS.UseProfile("Nope"))
+    NS.DeleteProfile("Raid"); assert(NS.ProfileName() == nil and NS.db == JustTheTooltipDB, "back to shared")
+    -- a character still set to a profile deleted elsewhere: shared at its next login
+    JustTheTooltipCharDB.profile = "Gone"; NS.LoadDB()
+    assert(NS.db == JustTheTooltipDB and JustTheTooltipCharDB.profile == nil)
+    """
+
+@test("size: at 100% a tooltip keeps its own size (another addon's); another size is applied; back to 100%, its own again")
+def _():
+    """
+    local tip = MOCK.Tooltip("ShoppingTooltip2")
+    tip._scale = 0.9
+    NS.db.scale = 1
+    NS.Look.Adopt(tip); tip:Show()
+    assert(tip._scale == 0.9, "kept: " .. tip._scale)
+    NS.db.scale = 1.2; NS.Look.Refresh(); assert(tip._scale == 1.2)
+    NS.db.scale = 1; NS.Look.Refresh(); assert(tip._scale == 0.9, "its own again")
+    """
+
+@test("/jtt source: a drop NeedRoll's newer line replaces on the tooltip is marked so")
+def _():
+    """
+    JustTheTooltipSources = { items = { [700] = "d1" }, quests = {}, npcs = { [1] = "Hogger|11|11|3|0|" }, objects = {}, instances = {} }
+    NeedRollDB = {}
+    C_AddOns = { IsAddOnLoaded = function(n) return n == "NeedRoll" end }
+    local real = CreateFrame
+    CreateFrame = function(kind, name, ...)
+      if kind == "GameTooltip" then
+        local t = MOCK.Tooltip(name)
+        t.SetItemByID = function(s) s:ClearLines(); s:AddLine("Item"); s:AddLine("|A:Dungeon:14:14|a Hogger - The Stockade") end
+        return t
+      end
+      return real(kind, name, ...)
+    end
+    NS.db.sources = true
+    NS.Sources.Hold()
+    local t = table.concat(NS.Sources.Explain(700), " / ")
+    assert(t:find("Boss: Hogger | from JTT's data (QuestieDB, WoW: Forever) | database | not on the tooltip: NeedRoll's newer line for this dungeon replaces it", 1, true), t)
+    assert(t:find("Dungeon: Hogger - The Stockade | from NeedRoll, in game", 1, true), t)
+    """
+
 if __name__ == '__main__':
     print(f"\n{count - len(failures)}/{count} passed")
     sys.exit(1 if failures else 0)

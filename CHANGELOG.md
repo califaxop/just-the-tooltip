@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.9.0 (Milestone 4: customization and presentation; test build)
+
+- New in the settings: choose where each line shows: on the game's tooltip, on chat links, on
+  comparisons (Item ID, Spell ID, Item level, Where gear comes from). Everything is on as before
+  until you change it.
+- Put the lines on items in your own order (Up / Down).
+- More detail (off by default): pick Alt or Ctrl. Hold it over a tooltip to see every source (not
+  only three), each tagged with where Just the Tooltip! learned it, and IDs and item level even
+  where they're turned off.
+- At 100% size, tooltips keep their own size, so one another addon sizes is no longer reset.
+- Profiles: keep several sets of settings and pick one per character. Your current settings are
+  the shared ones every character uses until it picks a profile.
+- `/jtt source` says which of its drop lines NeedRoll's newer line replaces on the tooltip.
+
 ## 1.8.0 (Milestone 3: information engine; test build)
 
 - Each tooltip's item, spell or unit details are read once and shared by every line and colour,

@@ -466,14 +466,30 @@ function S.Explain(id)
   local lines, more = Lines(id)
   local all = {}
   for _, l in ipairs(lines) do all[#all + 1] = l end
-  if held and CanHold() then for _, l in ipairs(FromNeedRoll(id).lines) do all[#all + 1] = l end end
+  local nrZones = {}
+  if held and CanHold() then
+    for _, l in ipairs(FromNeedRoll(id).lines) do
+      all[#all + 1] = l
+      if l.kind ~= "Quest" then nrZones[#nrZones + 1] = l.zone:lower() end
+    end
+  end
+  -- (1.9.0) JTT's drops in a dungeon NeedRoll names: NeedRoll's line is the one the tooltip shows
+  local function Replaced(l)
+    if l.from == FROM.needroll or #nrZones == 0 then return false end
+    if not (l.kind == "Dungeon" or l.kind == "Raid" or l.kind == "Boss" or l.kind == "Enemy") then return false end
+    local z = (l.zone or ""):lower()
+    if z == "" then return true end
+    for _, c in ipairs(nrZones) do if c:find(z, 1, true) or z:find(c, 1, true) then return true end end
+    return false
+  end
   L[1] = format("item %d: %d source%s known%s (data: %s; Questie: %s)", id, #all, #all == 1 and "" or "s",
     (function() local n = 0 for _, v in pairs(more) do n = n + v end return n > 0 and format(", +%d more not named", n) or "" end)(),
     S.loadState, S.QuestieState())
   for _, l in ipairs(all) do
     local plain = (l.text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
-    L[#L + 1] = format("  %s: %s%s | from %s | %s%s", l.kind, plain, l.right ~= "" and (" (" .. l.right .. ")") or "",
-      l.from or "?", l.trust or "?", l.chance and format(" | Classic 1.12 chance %s%%", l.chance) or "")
+    L[#L + 1] = format("  %s: %s%s | from %s | %s%s%s", l.kind, plain, l.right ~= "" and (" (" .. l.right .. ")") or "",
+      l.from or "?", l.trust or "?", l.chance and format(" | Classic 1.12 chance %s%%", l.chance) or "",
+      Replaced(l) and " | not on the tooltip: NeedRoll's newer line for this dungeon replaces it" or "")
   end
   return L
 end
@@ -504,8 +520,14 @@ local function Says(text, what)
   return false
 end
 
-function S.Add(tip, id)
-  if not (ns.db.sources and Readable(id) and type(id) == "number") then return end
+-- With the detail key held (1.9.0): every source (no "+N more"), each tagged with where it was learned.
+local function Tag(l)
+  local t = l.from == FROM.needroll and "NeedRoll" or l.from == FROM.questie and "Questie" or "JTT data"
+  if l.chance then t = t .. ", Classic order" end
+  return " " .. GREY .. "(" .. t .. ")|r"
+end
+function S.Add(tip, id, detail)
+  if not ((ns.db.sources or detail) and Readable(id) and type(id) == "number") then return end
   local lines, extra = Lines(id)
   local text, nr = Already(tip)
   -- JTT's own heading already there (the same tooltip written to twice): not again (1.8.0)
@@ -559,7 +581,7 @@ function S.Add(tip, id)
       nrDrops = true
     elseif l.name and Says(text, l.name) then
       -- already in the tooltip (another addon named this boss, quest, vendor or chest)
-    elseif #show < MAX_LINES then
+    elseif #show < (detail and 99 or MAX_LINES) then
       show[#show + 1] = l
     else
       more = more + 1
@@ -572,7 +594,7 @@ function S.Add(tip, id)
   -- just one: on the heading line ("Source: [chest] Random chests and containers")
   if #show == 1 and more == 0 then
     local l = show[1]
-    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r", GREY .. l.right .. "|r")
+    tip:AddDoubleLine(GOLD .. "Source:|r " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. (detail and Tag(l) or ""), GREY .. l.right .. "|r")
     return
   end
   -- "Source: Dungeon, Quest", then a line for each
@@ -582,7 +604,7 @@ function S.Add(tip, id)
   end
   tip:AddLine(GOLD .. "Source:|r " .. WHITE .. (#kinds > 0 and table.concat(kinds, ", ") or "More") .. "|r")
   for _, l in ipairs(show) do
-    tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r", GREY .. l.right .. "|r")
+    tip:AddDoubleLine("  " .. Icon(l.kind, l.skill) .. " " .. WHITE .. l.text .. "|r" .. (detail and Tag(l) or ""), GREY .. l.right .. "|r")
   end
   if more > 0 then tip:AddLine("  " .. GREY .. format("+%d more source%s", more, more == 1 and "" or "s") .. "|r") end
 end

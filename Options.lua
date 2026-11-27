@@ -84,6 +84,102 @@ local function BuildPanel(panel)
   local n = at(UI.Text(panel, "note", "Lines from your other addons (Equip This!, Questie, What's Training...) still show: Just the Tooltip! changes the game's tooltip rather than replacing it."), 26, -592)
   n:SetWidth(W_)
 
+  -- Second column (1.9.0): where each line shows, their order, more detail, profiles -------------
+  local X = 26 + W_ + 40
+  at(UI.Section(panel, "Where each line shows", W_), X, -54)
+  local COLS = { { "main", "The game's", 230 }, { "ref", "Chat links", 320 }, { "compare", "Comparisons", 410 } }
+  for _, c in ipairs(COLS) do
+    local h = at(UI.Text(panel, "note", c[2]), X + c[3] - 14, -82); h:SetWidth(90)
+  end
+  local LINES = { { "itemId", "Item ID" }, { "spellId", "Spell ID" }, { "itemLevel", "Item level" }, { "sources", "Where gear comes from" } }
+  for i, l in ipairs(LINES) do
+    local y = -100 - (i - 1) * 24
+    at(UI.Text(panel, "line", l[2]), X + 12, y - 3)
+    for _, c in ipairs(COLS) do
+      if not (l[1] == "spellId" and c[1] == "compare") then -- (comparisons are items)
+        track(at(UI.Check(panel, "", { function()
+          local w = ns.db.where[l[1]]
+          return not (type(w) == "table" and w[c[1]] == false)
+        end, function(v)
+          if type(ns.db.where) ~= "table" then ns.db.where = {} end
+          ns.db.where[l[1]] = type(ns.db.where[l[1]]) == "table" and ns.db.where[l[1]] or {}
+          ns.db.where[l[1]][c[1]] = (not v) and false or nil
+        end }, 22), X + c[3], y))
+      end
+    end
+  end
+  local wn = at(UI.Text(panel, "note", "The game's: bags, bars, units, everything at your cursor or spot. Chat links: items and spells you click in chat. Comparisons: the tooltips beside an item that compare it with yours. A line turned off under Show is off everywhere."), X, -200)
+  wn:SetWidth(W_)
+
+  at(UI.Section(panel, "Order of the lines on items", W_), X, -256)
+  local NAMES = { itemLevel = "Item level", sources = "Where gear comes from", itemId = "Item ID" }
+  local orderRows = {}
+  local function refreshOrder()
+    local o = ns.ItemOrder()
+    for i, r in ipairs(orderRows) do
+      r.key = o[i]
+      r.label:SetText(i .. ".  " .. (NAMES[o[i]] or o[i]))
+      r.up.SetActive(i > 1); r.down.SetActive(i < #o)
+    end
+  end
+  for i = 1, #ns.ITEM_LINES do
+    local y = -286 - (i - 1) * 26
+    local r = {}
+    r.label = at(UI.Text(panel, "line", ""), X + 12, y - 3)
+    r.up = at(UI.Button(panel, "Up", 60, function() if ns.MoveItemLine(r.key, -1) then refreshOrder() end end), X + 250, y)
+    r.down = UI.Button(panel, "Down", 60, function() if ns.MoveItemLine(r.key, 1) then refreshOrder() end end)
+    r.down:SetPoint("LEFT", r.up, "RIGHT", 6, 0)
+    orderRows[i] = r
+  end
+  refreshOrder()
+
+  at(UI.Section(panel, "More detail", W_), X, -380)
+  track(at(UI.Selector(panel, 300, {
+    { "none", "Off" },
+    { "ALT", "While holding Alt" },
+    { "CTRL", "While holding Ctrl" },
+  }, S("detailKey"), nil, "Hold the key over a tooltip to see every detail."), X, -410))
+  local dn = at(UI.Text(panel, "note", "Held over a tooltip: every source (not only three), each tagged with where it was learned (JTT data, Questie, NeedRoll; \"Classic order\" for drops ordered by Classic 1.12 chances), and IDs and item level even where they're turned off."), X, -440)
+  dn:SetWidth(W_)
+
+  at(UI.Section(panel, "Profiles", W_), X, -496)
+  local function current() return ns.ProfileName() end
+  local pf = at(UI.Text(panel, "line", ""), X + 40, -529)
+  local function refreshProfile()
+    pf:SetText("This character uses:  " .. (current() and ("|cffffd200" .. current() .. "|r") or "|cffffd200Shared|r (every character's)"))
+  end
+  local function step(d)
+    local list = { false }
+    for _, n in ipairs(ns.ProfileNames()) do list[#list + 1] = n end
+    local i = 1
+    for k, n in ipairs(list) do if (n or nil) == current() then i = k end end
+    i = (i - 1 + d) % #list + 1
+    ns.UseProfile(list[i] or nil)
+  end
+  at(UI.Button(panel, "<", 24, function() step(-1) end), X, -526)
+  local nxt = at(UI.Button(panel, ">", 24, function() step(1) end), X + W_ - 24, -526)
+  local newName = ""
+  local edit = at(UI.Edit(panel, 200, { function() return newName end, function(v) newName = v end }, "New profile name"), X, -558)
+  local create = UI.Button(panel, "New profile", 110, function()
+    if edit.GetText then newName = edit:GetText() or newName end
+    if ns.NewProfile(newName) then newName = ""; if edit.SetText then edit:SetText("") end
+    else ns.Print("give the new profile a name that isn't taken.") end
+  end)
+  create:SetPoint("LEFT", edit, "RIGHT", 8, 0)
+  local del = UI.Button(panel, "Delete this profile", 140, function()
+    local n = current()
+    if n then ns.DeleteProfile(n); ns.Print("profile \"" .. n .. "\" deleted; this character uses the shared settings.") end
+  end)
+  del:SetPoint("LEFT", create, "RIGHT", 8, 0)
+  local pn = at(UI.Text(panel, "note", "Shared: the settings every character uses unless it picks a profile. Each profile is a whole set of settings of its own; a new one starts as a copy of the settings in use. < > switches this character's."), X, -590)
+  pn:SetWidth(W_)
+  ns.RefreshOptions = function()
+    for _, w in ipairs(refreshers) do w.Refresh() end
+    showRows(); refreshOrder(); refreshProfile()
+    del.SetActive(current() ~= nil)
+  end
+  refreshProfile(); del.SetActive(current() ~= nil)
+
   -- hover to see where tooltips go now
   local preview = at(UI.Button(panel, "Hover to preview", 150, function() end), 26, -638)
   preview:HookScript("OnEnter", function(self)
@@ -94,7 +190,7 @@ local function BuildPanel(panel)
   end)
   preview:HookScript("OnLeave", function() GameTooltip:Hide() end)
 
-  panel:HookScript("OnShow", function() for _, w in ipairs(refreshers) do w.Refresh() end; showRows() end)
+  panel:HookScript("OnShow", function() ns.RefreshOptions() end)
   panel:HookScript("OnHide", function() if ns.Anchor.unlocked then ns.Anchor.Unlock(false) end end)
   showRows()
   panel.height = 684
@@ -131,6 +227,13 @@ local function BugReport()
     tostring(db.anchor), tostring(db.scope), tostring(db.corner), db.offX or 0, db.offY or 0, tostring(db.look), db.scale or 1,
     yes(db.colorBorder), yes(db.colorNPC), yes(db.ids), yes(db.itemLevel), yes(db.sources), yes(db.target), yes(db.healthBar),
     yes(db.combatHide), yes(db.instantHide))
+  local off = {}
+  for line, w in pairs(type(db.where) == "table" and db.where or {}) do
+    for kind, v in pairs(type(w) == "table" and w or {}) do if v == false then off[#off + 1] = line .. "/" .. kind end end
+  end
+  table.sort(off)
+  L[#L + 1] = format("profile: %s; item line order: %s; detail key: %s; lines turned off on: %s", ns.ProfileName() or "shared",
+    table.concat(ns.ItemOrder(), ", "), tostring(db.detailKey), #off > 0 and table.concat(off, ", ") or "none")
   local srcOk = ns.Sources.Available()
   L[#L + 1] = format("sources addon: %s; FlareUI: %s; EllesmereUI: %s", srcOk and "installed" or "not installed",
     yes(type(FlareUI) == "table"), yes(UI.HasEllesmere()))
@@ -161,7 +264,7 @@ end
 
 function ns.OpenOptions()
   if not window then
-    window = UI.Window("JustTheTooltipOptionsWindow", 522, 660)
+    window = UI.Window("JustTheTooltipOptionsWindow", 26 + 470 + 40 + 470 + 26, 660) -- (two columns since 1.9.0)
     window:SetPoint("CENTER")
     UI.SetHost(window) -- pop-ups (the bug report) sit over this window
     UI.HeaderButton(window, "Bugs & Feedback", 130, function() ns.ShowBugReport() end)

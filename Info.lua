@@ -42,8 +42,8 @@ local function HasID(tip, id)
   return false
 end
 
-local function AddID(tip, label, id)
-  if not (ns.db.ids and Readable(id) and type(id) == "number" and id > 0) then return end
+local function AddID(tip, label, id, detail)
+  if not ((ns.db.ids or detail) and Readable(id) and type(id) == "number" and id > 0) then return end
   if HasID(tip, id) then return end
   tip:AddLine(GREY .. label .. ": " .. id .. "|r")
 end
@@ -84,8 +84,8 @@ function I.GearLevel(level, equipLoc, classID)
   return level
 end
 
-local function ItemLevel(tip, it)
-  if not ns.db.itemLevel then return end
+local function ItemLevel(tip, it, detail)
+  if not (ns.db.itemLevel or detail) then return end
   -- (not loaded yet: nothing now; the game shows the tooltip again once the item's data arrives)
   local level = I.GearLevel(it.level, it.equipLoc, it.classID)
   if not level or Says(tip, function(l, r) return I.NamesLevel(l, r, level) end) then return end
@@ -94,17 +94,26 @@ end
 
 -- (1.8.0) The item's facts gathered once (Facts.lua) and handed to each category; each category
 -- runs on its own (Facts.Run), so one failing leaves the rest.
+-- (1.9.0) In the order chosen (ns.ItemOrder), on the tooltips chosen (ns.Shows: the game's,
+-- chat links, comparisons); with the detail key held, everything, on every tooltip.
 local Run = ns.Facts.Run
+local ITEM_LINE = {
+  itemLevel = function(tip, it, detail) ItemLevel(tip, it, detail) end,
+  sources = function(tip, it, detail) if ns.Sources then ns.Sources.Add(tip, it.id, detail) end end,
+  itemId = function(tip, it, detail) AddID(tip, "Item ID", it.id, detail) end,
+}
 function I.OnItem(tip, data)
   local it = ns.Facts.Item(tip, data)
-  Run("itemLevel", ItemLevel, tip, it)
-  if ns.Sources then Run("sources", ns.Sources.Add, tip, it.id) end
-  Run("itemId", AddID, tip, "Item ID", it.id)
+  local detail = ns.Detail()
+  for _, key in ipairs(ns.ItemOrder()) do
+    if detail or ns.Shows(key, tip) then Run(key, ITEM_LINE[key], tip, it, detail) end
+  end
   Run("look", ns.Look.OnItem, tip, it)
 end
 
 function I.OnSpell(tip, data)
-  Run("spellId", AddID, tip, "Spell ID", ns.Facts.Spell(data).id)
+  local detail = ns.Detail()
+  if detail or ns.Shows("spellId", tip) then Run("spellId", AddID, tip, "Spell ID", ns.Facts.Spell(data).id, detail) end
 end
 
 ---------------------------------------------------------------------------
@@ -184,6 +193,16 @@ function I.Hook()
   on(T.Unit, I.OnUnit)
   on(T.Corpse, I.OnWorldThing)
   on(T.Object, I.OnWorldThing)
+  -- (1.9.0) the detail key pressed or let go over a tooltip: shown again with or without the details
+  local mod = CreateFrame("Frame")
+  pcall(mod.RegisterEvent, mod, "MODIFIER_STATE_CHANGED")
+  mod:SetScript("OnEvent", function(_, _, key)
+    local want = ns.db and ns.db.detailKey
+    if not (want == "ALT" or want == "CTRL") or type(key) ~= "string" or not key:find(want, 1, true) then return end
+    for _, tip in ipairs(ns.Tooltips()) do
+      if tip:IsShown() and tip.RefreshData then ns.Safe(tip.RefreshData, tip) end
+    end
+  end)
   if GameTooltipStatusBar then
     -- the game shows the bar for every unit: keep it hidden when it's turned off
     GameTooltipStatusBar:HookScript("OnShow", function(bar) if not ns.db.healthBar then bar:Hide() end end)

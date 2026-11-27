@@ -14,7 +14,7 @@ local orig = {}
 L.orig = orig
 local function Remember(tip)
   if orig[tip] then return orig[tip] end
-  local o = {}
+  local o = { scale = ns.Safe(tip.GetScale, tip) }
   local n = tip.NineSlice
   if n then
     o.alpha = ns.Safe(n.GetAlpha, n)
@@ -78,7 +78,10 @@ local function Paint(tip)
       end
     end
   end
-  if tip:GetScale() ~= ns.db.scale then tip:SetScale(ns.db.scale) end
+  -- size: at 100% the tooltip's own (1.9.0: another addon may size it), else the size chosen
+  local want = ns.db.scale
+  if want == 1 and type(o.scale) == "number" then want = o.scale end
+  if tip:GetScale() ~= want then tip:SetScale(want) end
 end
 L.Paint = Paint
 
