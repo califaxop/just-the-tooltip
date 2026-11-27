@@ -463,3 +463,19 @@ Results (1.10.0 test build):
    Each has its lines, and no Lua errors.
 7. `/jtt report`: it opens with the line to copy, with the last tooltips and the API summary in it.
 
+Results (2.0.0 release candidate):
+- 2: action buttons, then FlareUI's player frame. "JTT: the mouse left its frame" once (#90);
+  others closed by the game. Three said "?: not seen ending" (#82, #83, #85): a button putting
+  new content in its tooltip while it was up (the game keeps button tooltips current), so a new
+  record began without the old one closing. Now such a record ends "refreshed by the same frame",
+  or "replaced (shown for X)" for another frame.
+- 3: "27 game functions, 0 missing on this client", every one present (GetMouseFoci,
+  C_Item.GetItemInfo, C_SpellBook.IsSpellKnown, C_AddOns.* under their newer names).
+- 4: integrations loaded: Questie 12.15.0, NeedRoll v2.0.2, Auctionator 354, FlareUI 7.1.2; 70
+  tooltips placed, 0 moved.
+- 5: cursor at every size and corner: pass.
+- 7: `/jtt report` with the last tooltips (world objects closed by "the game started its fade
+  (no fade: hidden at once)") and the API summary.
+- NeedRoll is v2.0.2 now (verified by source: v1.9.0). Its `tooltipSources` setting and its lines
+  work as before (NeedRoll's lines shown JTT's way, `/jtt source` items 7720 and 7721).
+

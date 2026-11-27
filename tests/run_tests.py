@@ -806,6 +806,13 @@ def _():
     T:SetOwner(MOCK.obj("ContainerFrame1Item1", UIParent), "ANCHOR_RIGHT"); T:Show(); T:Hide()
     r = NS.Anchor.history[#NS.Anchor.history]
     assert(r.owner == "ContainerFrame1Item1" and r.anchor == "ANCHOR_RIGHT" and r.ended == "the game (or another addon)")
+    -- a button refreshing its tooltip while it's up; then another frame taking it over
+    local btn = MOCK.obj("ActionButton11", UIParent)
+    T:SetOwner(btn, "ANCHOR_NONE"); T:Show(); T:SetOwner(btn, "ANCHOR_NONE")
+    assert(NS.Anchor.history[#NS.Anchor.history - 1].ended == "refreshed by the same frame")
+    T:SetOwner(MOCK.obj("ActionButton10", UIParent), "ANCHOR_NONE")
+    assert(NS.Anchor.history[#NS.Anchor.history - 1].ended == "replaced (shown for ActionButton10)")
+    T:Hide()
     for _ = 1, 30 do T:SetOwner(UIParent, "ANCHOR_NONE") end
     assert(#NS.Anchor.history == 20, "the last 20")
     PRINTS = {}

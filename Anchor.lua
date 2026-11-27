@@ -65,7 +65,13 @@ local function Fresh(_, owner, anchor)
   S.gen = S.gen + 1
   S.unit, S.thing, S.ghost, S.seenCursor, S.startFocus, S.ownerSeen, S.awayFor = false, false, false, false, nil, false, 0
   local h = A.history
-  h[#h + 1] = { gen = S.gen, at = GetTime(), owner = Name(owner), anchor = type(anchor) == "string" and anchor or nil }
+  -- the one before still open: new content put in it (a button refreshing its own tooltip, or
+  -- something else taking the tooltip over)
+  local prev, name = h[#h], Name(owner)
+  if prev and not prev.ended and GameTooltip:IsShown() then
+    prev.ended, prev.endedAt = prev.owner == name and "refreshed by the same frame" or ("replaced (shown for " .. name .. ")"), GetTime()
+  end
+  h[#h + 1] = { gen = S.gen, at = GetTime(), owner = name, anchor = type(anchor) == "string" and anchor or nil }
   if #h > HISTORY then table.remove(h, 1) end
 end
 A.Fresh = Fresh
