@@ -1,0 +1,18 @@
+Copyright (c) 2026 CalifaxOP. All rights reserved.
+
+Just the Tooltip! is free to download and use for playing World of Warcraft.
+
+You may not copy, redistribute, republish or sell it, in whole or in part, modified or not,
+without written permission from CalifaxOP. This includes uploading it, or any version of it,
+to CurseForge, Wago, WoWInterface, GitHub or any other site.
+
+You may read its source code, and fork this repository on GitHub as GitHub's Terms of Service
+allow. Bug reports, feedback and feature requests through the repository's issue forms are
+welcome.
+
+Exception: the JustTheTooltip_Sources folder (where gear comes from) contains data from
+QuestieDB and CMaNGOS Classic-DB and is licensed under the GNU General Public License v3, not
+under these terms. See JustTheTooltip_Sources/LICENSE and JustTheTooltip_Sources/README.md.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT
+SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM ITS USE.
