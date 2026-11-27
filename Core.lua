@@ -132,9 +132,16 @@ function ns.TipKind(tip)
   if type(name) == "string" and (name:find("^ShoppingTooltip%d") or name:find("^ItemRefShoppingTooltip%d")) then return "compare" end
   return "main"
 end
-function ns.Shows(line, tip)
+function ns.ShowsOn(line, kind)
   local w = type(ns.db.where) == "table" and ns.db.where[line]
-  return not (type(w) == "table" and w[ns.TipKind(tip)] == false)
+  return not (type(w) == "table" and w[kind] == false)
+end
+function ns.Shows(line, tip) return ns.ShowsOn(line, ns.TipKind(tip)) end
+-- turn a line on or off on one kind of tooltip (off is kept as false; on, as nothing)
+function ns.SetShowsOn(line, kind, on)
+  if type(ns.db.where) ~= "table" then ns.db.where = {} end
+  if type(ns.db.where[line]) ~= "table" then ns.db.where[line] = {} end
+  if on then ns.db.where[line][kind] = nil else ns.db.where[line][kind] = false end
 end
 
 -- the item lines in the order chosen: every line once (an old, damaged or missing order still works)

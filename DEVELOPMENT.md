@@ -316,6 +316,11 @@ Milestone 3 verified in game and reviewed.
 | 19 | Profiles | The settings at the top of `JustTheTooltipDB` are the shared ones (every earlier version's, unchanged). Named profiles are kept in `JustTheTooltipDB.profiles`, each a whole independent set. A character's choice is in `JustTheTooltipCharDB.profile` (new, per character; nil means shared). New (a copy of the settings in use), switch, delete (a character using it goes back to shared, at once or at its next login) |
 | 20 | `/jtt source` | Says which of JTT's drop lines NeedRoll's newer line replaces on the tooltip (noted in M3's results) |
 
+Fixed in the 1.9.0 test build: the grid's boxes couldn't be unticked. `(not v) and false or nil` gives
+nil for an untick (in Lua, `false or nil` is nil), and nil means on. Now `ns.SetShowsOn` (off is
+false, on is nothing), with a test, and every box in the window clicked off and on again against
+the mock.
+
 The settings window has a second column for these: "Where each line shows" (a grid), "Order of
 the lines on items" (Up / Down), "More detail" and "Profiles".
 

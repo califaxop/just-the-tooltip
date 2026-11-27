@@ -97,14 +97,8 @@ local function BuildPanel(panel)
     at(UI.Text(panel, "line", l[2]), X + 12, y - 3)
     for _, c in ipairs(COLS) do
       if not (l[1] == "spellId" and c[1] == "compare") then -- (comparisons are items)
-        track(at(UI.Check(panel, "", { function()
-          local w = ns.db.where[l[1]]
-          return not (type(w) == "table" and w[c[1]] == false)
-        end, function(v)
-          if type(ns.db.where) ~= "table" then ns.db.where = {} end
-          ns.db.where[l[1]] = type(ns.db.where[l[1]]) == "table" and ns.db.where[l[1]] or {}
-          ns.db.where[l[1]][c[1]] = (not v) and false or nil
-        end }, 22), X + c[3], y))
+        track(at(UI.Check(panel, "", { function() return ns.ShowsOn(l[1], c[1]) end,
+          function(v) ns.SetShowsOn(l[1], c[1], v) end }, 22), X + c[3], y))
       end
     end
   end

@@ -561,6 +561,16 @@ def _():
     assert(not has(ItemRefTooltip, "Spell ID"), "a spell's chat link: off")
     """
 
+@test("where each line shows: the settings' boxes tick off and on again (1.9.0's untick turned it straight back on)")
+def _():
+    """
+    NS.SetShowsOn("itemId", "compare", false)
+    assert(NS.ShowsOn("itemId", "compare") == false and NS.db.where.itemId.compare == false, "off")
+    assert(NS.ShowsOn("itemId", "main") == true, "the others still on")
+    NS.SetShowsOn("itemId", "compare", true)
+    assert(NS.ShowsOn("itemId", "compare") == true and NS.db.where.itemId.compare == nil, "on again")
+    """
+
 @test("order: the item lines in the order chosen; an old or damaged order still has every line once")
 def _():
     """
