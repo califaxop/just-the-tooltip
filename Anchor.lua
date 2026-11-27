@@ -238,19 +238,20 @@ function A.Unlock(on)
   if A.onUnlock then A.onUnlock(on) end
 end
 
--- /jtt debug: what the tooltip is doing right now
-function A.Debug()
+-- /jtt debug and the bug report: what the tooltip is doing right now
+function A.DebugLine()
   local tip = GameTooltip
   local owner = tip:GetOwner()
   local ok, _, unit = pcall(tip.GetUnit, tip)
   local okM, mo = pcall(UnitExists, "mouseover")
   local okD, data = pcall(tip.GetTooltipData, tip)
   local kind = okD and type(data) == "table" and data.type
-  ns.Print(format("shown=%s type=%s owner=%s unit=%s mouseover=%s following=%s watching=%s worldUnit=%s worldThing=%s ghost=%s",
+  return (format("shown=%s type=%s owner=%s unit=%s mouseover=%s following=%s watching=%s worldUnit=%s worldThing=%s ghost=%s",
     tostring(tip:IsShown()), tostring(kind), tostring(owner and (owner.GetName and owner:GetName() or "a frame") or "none"),
     tostring(ok and ns.Readable(unit) and unit or "?"), tostring(okM and ns.Readable(mo) and mo or "?"),
     tostring(following), tostring(watching), tostring(worldUnit), tostring(worldThing), tostring(ghost)))
 end
+function A.Debug() ns.Print(A.DebugLine()) end
 
 function A.ToggleTrace()
   trace = not trace

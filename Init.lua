@@ -74,6 +74,8 @@ SlashCmdList.JUSTTHETOOLTIP = function(msg)
     ns.db.anchor = "custom"; ns.Anchor.Unlock(not ns.Anchor.unlocked)
   elseif cmd == "debug" then
     ns.Anchor.Debug()
+  elseif cmd == "report" then
+    ns.ShowBugReport()
   elseif cmd == "trace" then
     ns.Anchor.ToggleTrace()
   elseif cmd == "reset" then

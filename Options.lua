@@ -93,10 +93,6 @@ local function BuildPanel(panel)
     GameTooltip:Show()
   end)
   preview:HookScript("OnLeave", function() GameTooltip:Hide() end)
-  local fb = UI.Button(panel, "Report a bug / suggest", 170, function()
-    UI.ShowLink("JustTheTooltipLinkWindow", "Just the Tooltip!: bugs and ideas", "https://github.com/califaxop/just-the-tooltip/issues/new/choose")
-  end)
-  fb:SetPoint("LEFT", preview, "RIGHT", 8, 0)
 
   panel:HookScript("OnShow", function() for _, w in ipairs(refreshers) do w.Refresh() end; showRows() end)
   panel:HookScript("OnHide", function() if ns.Anchor.unlocked then ns.Anchor.Unlock(false) end end)
@@ -123,11 +119,46 @@ function ns.CreateOptions()
   end)
 end
 
+-- Report a bug (the title bar's button, /jtt report): the line to paste and its counters
+local function yes(v) return v and "yes" or "no" end
+local function BugReport()
+  local db = ns.db
+  local okB, build, number, _, toc = pcall(GetBuildInfo)
+  local _, class = UnitClass("player")
+  local L = { format("Just the Tooltip!; client %s (%s), interface %s; %s %d", okB and tostring(build) or "?",
+    okB and tostring(number) or "?", okB and tostring(toc) or "?", tostring(class), UnitLevel("player")) }
+  L[#L + 1] = format("settings: anchor %s (%s, %s %d,%d), look %s, scale %.2f, border colour %s, NPC colour %s, IDs %s, item level %s, sources %s, target %s, health bar %s, hide in combat %s, hide at once %s",
+    tostring(db.anchor), tostring(db.scope), tostring(db.corner), db.offX or 0, db.offY or 0, tostring(db.look), db.scale or 1,
+    yes(db.colorBorder), yes(db.colorNPC), yes(db.ids), yes(db.itemLevel), yes(db.sources), yes(db.target), yes(db.healthBar),
+    yes(db.combatHide), yes(db.instantHide))
+  local srcOk = ns.Sources.Available()
+  L[#L + 1] = format("sources addon: %s; FlareUI: %s; EllesmereUI: %s", srcOk and "installed" or "not installed",
+    yes(type(FlareUI) == "table"), yes(UI.HasEllesmere()))
+  L[#L + 1] = "tooltip now: " .. ns.Anchor.DebugLine()
+  local ANCHOR = { default = "the game's spot", cursor = "follows the cursor", custom = "your own spot" }
+  return table.concat(L, " // "), {
+    { "Interface\\Icons\\INV_Misc_Map_01", "Position", ANCHOR[db.anchor] or tostring(db.anchor) },
+    { "Interface\\Icons\\INV_Misc_Gem_Pearl_04", "Look", db.look == "blizzard" and "the game's" or "Just the Tooltip!'s" },
+    { "Interface\\Icons\\INV_Misc_Book_09", "Gear sources", db.sources and (srcOk and "on" or "on, addon missing") or "off" },
+    { "Interface\\Icons\\Ability_Warrior_BattleShout", "Hide in combat", yes(db.combatHide) },
+  }
+end
+local BUG = { name = "JustTheTooltipReportWindow", title = "Just the Tooltip! Bug Report",
+  repo = "https://github.com/califaxop/just-the-tooltip/issues/new",
+  included = "Included: Just the Tooltip!'s version, the game client, your class and level, its settings and what the tooltip is doing right now. Never: your name, realm, guild or other players.",
+  build = BugReport }
+function ns.ShowBugReport(kind)
+  local get = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+  BUG.version = get and get(ns.name, "Version") or nil
+  return UI.ShowBugReport(BUG, kind)
+end
+
 function ns.OpenOptions()
   if not window then
     window = UI.Window("JustTheTooltipOptionsWindow", 522, 660)
     window:SetPoint("CENTER")
-    UI.SetHost(window) -- pop-ups (the bug / idea link) sit over this window
+    UI.SetHost(window) -- pop-ups (the bug report) sit over this window
+    UI.HeaderButton(window, "Report a bug", 110, function() ns.ShowBugReport() end)
     local ok, e = pcall(BuildPanel, window)
     if not ok then window:Hide(); window = nil; ns.Print("settings failed: " .. tostring(e)); return end
     window:SetHeight(window.height or 660)

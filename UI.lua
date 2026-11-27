@@ -401,6 +401,18 @@ function UI.Window(name, width, height)
   win:SetClampedToScreen(true)
   tinsert(UISpecialFrames, name) -- Esc closes it
   UI.Skin(function() UI.SkinWindow(win, 0.96) end)
+  -- solid underneath (the styles' backgrounds are see-through: with several addons' windows open,
+  -- one showed through another), in EllesmereUI's panel colour when it's installed
+  local solid = win:CreateTexture(nil, "BACKGROUND", nil, -8)
+  solid:SetPoint("TOPLEFT", 3, -3); solid:SetPoint("BOTTOMRIGHT", -3, 3)
+  UI.Skin(function(th)
+    local ok, r, g, b = false
+    if th.eui and UI.euiSkin and UI.euiSkin.GetPanelColor then ok, r, g, b = pcall(UI.euiSkin.GetPanelColor) end
+    if ok and r then solid:SetColorTexture(r, g, b, 1) else solid:SetColorTexture(0.04, 0.035, 0.03, 1) end
+  end)
+  -- the one opened or clicked last comes to the front, whole (never interleaved with another)
+  win:SetToplevel(true)
+  win:HookScript("OnShow", function(self) self:Raise() end)
   -- "×" close button
   local c = CreateFrame("Button", nil, win)
   c:SetSize(22, 22); c:SetPoint("TOPRIGHT", -8, -8)
@@ -422,13 +434,6 @@ function UI.Popup(name, width, height)
   local win = UI.Window(name, width, height)
   win:SetFrameStrata("FULLSCREEN_DIALOG")
   win:SetMovable(false); win:SetScript("OnDragStart", nil); win:SetScript("OnDragStop", nil)
-  local solid = win:CreateTexture(nil, "BACKGROUND", nil, -8)
-  solid:SetPoint("TOPLEFT", 3, -3); solid:SetPoint("BOTTOMRIGHT", -3, 3)
-  UI.Skin(function(th) -- solid, in EllesmereUI's panel colour when it's installed
-    local ok, r, g, b = false
-    if th.eui and UI.euiSkin and UI.euiSkin.GetPanelColor then ok, r, g, b = pcall(UI.euiSkin.GetPanelColor) end
-    if ok and r then solid:SetColorTexture(r, g, b, 1) else solid:SetColorTexture(0.04, 0.035, 0.03, 1) end
-  end)
   win.shade = CreateFrame("Frame", nil, win)
   win.shade:EnableMouse(true) -- clicks on the window behind go nowhere while this is open
   local dim = win.shade:CreateTexture(nil, "BACKGROUND")
@@ -460,28 +465,81 @@ function UI.SetHost(host)
   host:HookScript("OnHide", function() for _, p in ipairs(popups) do p:Hide() end end)
 end
 
--- A small window with a link, selected and ready to copy (addons can't open a browser).
-function UI.ShowLink(name, title, url)
-  local win = _G[name]
-  if not win then
-    win = UI.Popup(name, 400, 118)
-    win.title = UI.Text(win, "title", "")
-    win.title:SetPoint("TOPLEFT", 20, -18)
-    local note = UI.Text(win, "note", "Press Ctrl+C to copy, then paste it into your browser.")
-    note:SetPoint("TOPLEFT", 20, -44)
-    win.edit = UI.Edit(win, 360, { function() return win.url end, function() end })
-    win.edit:SetPoint("TOPLEFT", 20, -66)
-    -- keep the link intact if someone types in the box
-    win.edit:HookScript("OnTextChanged", function(self, user)
-      if user and self:GetText() ~= win.url then self:SetText(win.url); self:HighlightText() end
-    end)
-    win.edit:HookScript("OnEditFocusGained", function(self) self:HighlightText() end)
-    win.edit:HookScript("OnEscapePressed", function() win:Hide() end)
+-- A small button in a window's title bar, left of its ×: "Report a bug" on every settings window
+function UI.HeaderButton(win, label, width, onClick)
+  local b = UI.Button(win, label, width, onClick)
+  b:SetHeight(20)
+  b:SetPoint("TOPRIGHT", -34, -9)
+  return b
+end
+
+-- The bug report window (like Questie's trace export and Equip This!'s fight records): the form's
+-- link to copy at the top, what to do, the report line to copy, what's in it (counters), what's
+-- included. Addons can't open a browser: both are boxes, selected and ready for Ctrl+C.
+-- cfg: { name, title, repo (".../issues/new"), version, included,
+--        build = function() return line, { { icon, label, value }, ... up to 6 } end }
+-- kind: "bug" (default) or "idea" (the ideas form's link; no line needed)
+local BUG_NOTE = "Open the link above in your browser (needs a GitHub account), say what happened, and paste the line below into \"Debug output\". "
+  .. "Please open this window again for each report: the line holds things as they are right now."
+local IDEA_NOTE = "Open the link above in your browser (needs a GitHub account) and tell us your idea. The line below isn't needed for an idea."
+local function CopyBox(win, key)
+  local e = UI.Edit(win, 540, { function() return win[key] or "" end, function() end })
+  e:SetMaxLetters(0)
+  e:HookScript("OnTextChanged", function(self, user) if user and self:GetText() ~= win[key] then self:SetText(win[key] or ""); self:HighlightText() end end)
+  e:HookScript("OnEditFocusGained", function(self) self:HighlightText() end)
+  e:HookScript("OnEscapePressed", function() win:Hide() end)
+  return e
+end
+local reportWindows = {}
+function UI.ShowBugReport(cfg, kind)
+  local w = reportWindows[cfg.name]
+  if not w then
+    w = UI.Popup(cfg.name, 600, 330)
+    reportWindows[cfg.name] = w
+    local title = UI.Text(w, "title", cfg.title)
+    title:SetPoint("TOP", 0, -16)
+    w.urlBox = CopyBox(w, "url")
+    w.urlBox:SetPoint("TOP", 0, -42)
+    w.note = UI.Text(w, "note", "")
+    w.note:SetPoint("TOP", 0, -72); w.note:SetWidth(540); w.note:SetJustifyH("CENTER")
+    w.lineBox = CopyBox(w, "line")
+    w.lineBox:SetPoint("TOP", 0, -120)
+    w.stats = {}
+    for i = 1, 6 do
+      local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
+      local icon = w:CreateTexture(nil, "ARTWORK")
+      icon:SetSize(18, 18)
+      icon:SetPoint("TOPLEFT", 40 + col * 290, -158 - row * 24)
+      local t = UI.Text(w, "line", "")
+      t:SetPoint("LEFT", icon, "RIGHT", 8, 0)
+      t:SetWidth(255); t:SetWordWrap(false) -- (cut short, never into the next column)
+      w.stats[i] = { icon = icon, text = t }
+    end
+    w.inc = UI.Text(w, "note", "")
+    w.inc:SetPoint("TOP", 0, -236); w.inc:SetWidth(540); w.inc:SetJustifyH("CENTER")
+    w.kindBtn = UI.Button(w, "", 180, function() UI.ShowBugReport(w.cfg, w.kind == "bug" and "idea" or "bug") end)
+    w.kindBtn:SetPoint("BOTTOMLEFT", 20, 16)
+    local close = UI.Button(w, "Close", 110, function() w:Hide() end)
+    close:SetPoint("BOTTOMRIGHT", -20, 16)
   end
-  win.url = url
-  win.title:SetText(title)
-  win.edit:SetText(url)
-  win:Place(); win:Show()
-  win.edit:SetFocus()
-  win.edit:HighlightText()
+  w.cfg, w.kind = cfg, kind == "idea" and "idea" or "bug"
+  local ok, line, stats = pcall(cfg.build)
+  if not ok then line, stats = "(the report failed: " .. tostring(line) .. ")", {} end
+  w.line = tostring(line):gsub("|", "||") -- (a | as typed, not the start of a colour code)
+  w.url = cfg.repo .. (w.kind == "idea" and "?template=feature_request.yml"
+    or ("?template=bug_report.yml" .. (cfg.version and ("&version=" .. cfg.version) or "")))
+  w.urlBox:SetText(w.url); if w.urlBox.SetCursorPosition then w.urlBox:SetCursorPosition(0) end
+  w.lineBox:SetText(w.line)
+  w.note:SetText(w.kind == "bug" and BUG_NOTE or IDEA_NOTE)
+  w.inc:SetText(cfg.included or "")
+  for i, st in ipairs(w.stats) do
+    local v = stats and stats[i]
+    st.icon:SetShown(v ~= nil); st.text:SetShown(v ~= nil)
+    if v then st.icon:SetTexture(v[1]); st.text:SetText(v[2] .. ": |cffffd200" .. tostring(v[3]) .. "|r") end
+  end
+  w.kindBtn.SetLabel(w.kind == "bug" and "Suggest an idea instead" or "Report a bug instead")
+  w:Place(); w:Show(); w:Raise()
+  local focus = w.kind == "bug" and w.lineBox or w.urlBox
+  focus:SetFocus(); focus:HighlightText()
+  return w
 end
