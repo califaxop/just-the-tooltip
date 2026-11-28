@@ -3,7 +3,7 @@
 ## Notes: The game's tooltip, made better: put it by your cursor or anywhere you like, with item and spell IDs, item level, who a unit is targeting, and a cleaner look.
 ## IconTexture: Interface\AddOns\JustTheTooltip\media\Logo
 ## Author: You
-## Version: 2.0.0
+## Version: 2.1.0
 ## X-Curse-Project-ID: 1821207
 ## SavedVariables: JustTheTooltipDB
 ## SavedVariablesPerCharacter: JustTheTooltipCharDB
@@ -12,6 +12,7 @@
 Core.lua
 Facts.lua
 UI.lua
+Settings.lua
 Anchor.lua
 Look.lua
 Sources.lua

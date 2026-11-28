@@ -59,11 +59,11 @@ local function Paint(tip)
         s:SetBackdropColor(pr, pg, pb, 0.94)
         s.accent = { 0.28, 0.28, 0.28 }
       else
-        ui.SkinWindow(s, 0.92); s.accent = ui.BorderColor()
+        ui.SkinPanel(s, 0.92); s.accent = ui.BorderColor()
       end
       s.stamp = L.stamp
     end
-    if r then s:SetBackdropBorderColor(r, g, b, 1) else s:SetBackdropBorderColor(ui.RGB(s.accent)) end
+    if r then s:SetBackdropBorderColor(r, g, b, 1) else s:SetBackdropBorderColor(s.accent[1], s.accent[2], s.accent[3], 1) end
     s:Show()
     if tip.NineSlice then tip.NineSlice:SetAlpha(0) end
   else

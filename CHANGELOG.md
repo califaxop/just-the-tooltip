@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.0
+
+- A new settings window in the game's own Settings design, the same with any UI installed: the pages down the left (Position, Look, Show, Lines, Profiles, Status), gold setting names with the game's checkboxes, sliders (with arrows) and buttons, white section headings, a search box that jumps to any setting. Hover a setting for what it does.
+- Position: the cursor and own-spot settings grey out when they don't apply (they were hidden).
+- The Bugs & Feedback window matches it.
+- JTT style on the tooltip itself still follows FlareUI and EllesmereUI.
+- Tidied: the settings' old FlareUI / EllesmereUI styling is gone.
+
 ## 2.0.0 (the development plan: Milestones 1-6)
 
 The first release of the development plan. 1.6.0 to 1.10.0 below were test builds of its

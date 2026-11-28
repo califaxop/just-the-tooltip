@@ -580,6 +580,26 @@ def _():
     assert(NS.ShowsOn("itemId", "compare") == true and NS.db.where.itemId.compare == nil, "on again")
     """
 
+@test("settings window (2.1.0): the game's Settings design, six pages, every setting searchable; profiles switch from it")
+def _():
+    """
+    MinimalSliderWithSteppersMixin = MinimalSliderWithSteppersMixin or { Label = { Right = 2 }, Event = { OnValueChanged = "OnValueChanged" } }
+    local printed
+    local p0 = NS.Print; NS.Print = function(m) printed = m end
+    local w = NS.OpenOptions()
+    NS.Print = p0
+    assert(w and w.index and w._shown, tostring(printed))
+    local per, where = {}, {}
+    for _, e in ipairs(w.index) do per[e.page] = (per[e.page] or 0) + 1; where[e.label] = e.page end
+    for i = 1, 6 do assert((per[i] or 0) >= 2, "page " .. i .. ": " .. tostring(per[i])) end
+    assert(where["Tooltips go"] == 1 and where["Distance sideways"] == 1 and where["Size"] == 2 and where["Hide in combat"] == 3
+      and where["Item level on gear"] == 3 and where["Show every detail"] == 4 and where["New profile"] == 5 and where["Tooltip position"] == 6)
+    w.Refresh()
+    for i = 1, 6 do w.Select(i) end
+    assert(NS.NewProfile("Raid") and NS.ProfileName() == "Raid", "a profile, the window refreshed with it")
+    NS.UseProfile(nil)
+    """
+
 @test("order: the item lines in the order chosen; an old or damaged order still has every line once")
 def _():
     """
