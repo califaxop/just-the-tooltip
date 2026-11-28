@@ -7,6 +7,7 @@
 - The Bugs & Feedback window matches it.
 - JTT style on the tooltip itself still follows FlareUI and EllesmereUI.
 - Tidied: the settings' old FlareUI / EllesmereUI styling is gone.
+- With several of the author's addons installed, each settings window shows them all as icon tabs at its top left: click one for its settings, in the same place.
 
 ## 2.0.0 (the development plan: Milestones 1-6)
 

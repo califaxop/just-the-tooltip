@@ -12,6 +12,7 @@
 Core.lua
 Facts.lua
 UI.lua
+Suite.lua
 Settings.lua
 Anchor.lua
 Look.lua

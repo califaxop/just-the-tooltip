@@ -459,7 +459,7 @@ end
 -- The settings window: the game's Settings frame and art, the pages listed down the left under
 -- category headings, each page scrolling in Blizzard's scroll frame under its title and divider,
 -- a search box (any setting; pick one to go to it, flashing), Bugs & Feedback, Close.
--- cfg: { name, title, tagline, logo, bug = fn,
+-- cfg: { name, title, bug = fn,
 --   pages = { { name, what it's for (tooltip), build(child, R) }, ... },
 --   categories = { { heading, { page numbers } }, ... } }
 -- Returns the window; window.Refresh() refreshes every page's controls (also on show);
@@ -479,14 +479,8 @@ function UI.Settings(cfg)
   local index, pagesR = {}, {}
   window.index = index
 
-  -- top left: the logo and what the addon is
-  local x = 30
-  if cfg.logo then
-    local logo = window:CreateTexture(nil, "ARTWORK")
-    logo:SetSize(28, 28); logo:SetPoint("TOPLEFT", 30, -30); logo:SetTexture(cfg.logo)
-    x = 66
-  end
-  UI.Font(window, "GameFontHighlight", cfg.tagline):SetPoint("TOPLEFT", x, -38)
+  -- top left: the author's installed addons as icon tabs (Suite.lua), this one's tagline after them
+  ns.Suite.Tabs(window, cfg.title, 30, -27)
 
   -- the page
   local container = CreateFrame("Frame", nil, window)
@@ -642,4 +636,11 @@ end
 function UI.ToggleWindow(w)
   w:SetScale(math.max(0.5, math.min(1, (UIParent:GetHeight() - 40) / w:GetHeight())))
   if w:IsShown() then w:Hide() else w:Show() end
+end
+
+-- this addon in the icon tabs of every settings window (Suite.lua): title (its name, also the
+-- settings window's), its tagline, its icon, its place in the row, and its settings window (built
+-- when first asked for)
+function UI.JoinSuite(title, tagline, icon, order, getWindow)
+  ns.Suite.Register({ key = title, name = title, tagline = tagline, icon = icon, order = order, window = getWindow })
 end

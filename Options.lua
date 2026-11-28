@@ -168,8 +168,8 @@ local function PageStatus(_, R)
 end
 
 local function BuildWindow()
-  window = UI.Settings({ name = "JustTheTooltipOptionsWindow", title = "Just the Tooltip!", logo = "Interface\\AddOns\\JustTheTooltip\\media\\Logo",
-    tagline = "The game's tooltip, where you want it.", bug = function() ns.ShowBugReport() end,
+  window = UI.Settings({ name = "JustTheTooltipOptionsWindow", title = "Just the Tooltip!",
+    bug = function() ns.ShowBugReport() end,
     pages = {
       { "Position", "Where tooltips go: the game's spot, your cursor, or your own spot.", PagePosition },
       { "Look", "The tooltip's style, border colours and size.", PageLook },
@@ -251,11 +251,18 @@ function ns.ShowBugReport(kind)
   return UI.ShowBugReport(BUG, kind)
 end
 
-function ns.OpenOptions()
+-- the settings window, built the first time it's asked for
+local function GetWindow()
   if not window then
     local ok, e = pcall(BuildWindow)
     if not ok then if window then window:Hide() end; window = nil; ns.Print("settings failed: " .. tostring(e)); return end
   end
-  UI.ToggleWindow(window)
   return window
 end
+function ns.OpenOptions()
+  local w = GetWindow()
+  if w then UI.ToggleWindow(w) end
+  return w
+end
+UI.JoinSuite("Just the Tooltip!", "The game's tooltip, where you want it.",
+  "Interface\\AddOns\\JustTheTooltip\\media\\Logo", 6, GetWindow)

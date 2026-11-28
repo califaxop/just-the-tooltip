@@ -55,6 +55,7 @@ Each milestone is reviewed before the next starts.
 | `Facts.lua` | (1.8.0) What a tooltip is about, gathered once: `Facts.Item`, `Facts.Spell`, `Facts.Unit` / `Facts.Target` / `Facts.UnitOf`; game functions by name (`Facts.Resolve`); the information categories (`Facts.CATEGORIES`, `Facts.Run`, `Facts.InfoLines`) |
 | `UI.lua` | The tooltip's own look (JTT style): FlareUI's, EllesmereUI's or the plain panel |
 | `Settings.lua` | The shared settings kit (2.1.0): the game's own Settings design (window, pages, search, rows, controls, pop-ups, the Bugs & Feedback window), the same in every addon |
+| `Suite.lua` | The author's addons together: each installed one's settings window shows them all as icon tabs (a shared list, `CalifaxOPAddons`); the same file in every addon |
 | `Anchor.lua` | Where the tooltip goes (the game's spot, the cursor, your own spot) and when a world tooltip goes away: the update driver, the lifecycle state, `/jtt trace` |
 | `Look.lua` | The tooltip's look: JTT style or Blizzard's, quality / class / reaction borders, class-coloured names, size |
 | `Sources.lua` | "Source:" lines on gear: the companion data, Questie for items it lacks, NeedRoll's dungeon and raid lines |
