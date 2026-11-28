@@ -235,10 +235,10 @@ function UI.Window(name, width, height, title)
   f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
   f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
   f:SetClampedToScreen(true)
-  -- solid under the frame's own background, which is partly see-through (seen in game): nothing
-  -- behind shows through
+  -- a dark layer under the frame's own background, which is quite see-through (seen in game):
+  -- together, slightly see-through
   local solid = f:CreateTexture(nil, "BACKGROUND", nil, -8)
-  solid:SetColorTexture(0.05, 0.045, 0.04, 1)
+  solid:SetColorTexture(0.05, 0.045, 0.04, 0.55)
   solid:SetPoint("TOPLEFT", 4, -4); solid:SetPoint("BOTTOMRIGHT", -4, 4)
   -- the one opened or clicked last comes to the front, whole (never interleaved with another)
   f:SetToplevel(true)
