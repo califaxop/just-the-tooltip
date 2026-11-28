@@ -48,7 +48,6 @@ function UI.Button(parent, text, width, onClick)
     if self.tip then GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:SetText(self.tip, 1, 1, 1, 1, true); GameTooltip:Show() end
   end)
   b:SetScript("OnLeave", function(self) if self.tip then GameTooltip:Hide() end end)
-  b.SetLabel = function(t) b:SetText(t) end
   b.SetActive = function(on) b:SetEnabled(on) end
   return b
 end
